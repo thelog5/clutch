@@ -13,6 +13,7 @@ what to run or click. Tick them off as you go.
   Run this on your machine and leave it overnight (it resumes if interrupted):
   ```bash
   make setup
+  make pull-smoke  # 5 games: confirms stats.nba.com answers from your network
   make pull        # 1-2 hours, cached per game in data/raw/
   make features    # builds data/features.parquet
   make train       # trains all three models + writes the eval report

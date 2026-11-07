@@ -100,6 +100,11 @@ make web
 make test
 ```
 
+**Keeping it current:** `make refresh` pulls games played since the last run
+(only new games hit the network), rebuilds features, and regenerates the
+replay series and team strengths. The model isn't retrained. Commit
+`api/data/` afterwards so the deployed API picks up the new games.
+
 ## API
 
 | Endpoint | Purpose |

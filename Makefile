@@ -1,7 +1,7 @@
 PY ?= .venv/bin/python
 UV ?= uv
 
-.PHONY: setup pull features train eval precompute deploy-bundle synthetic api api-fake web test lint
+.PHONY: setup pull pull-smoke refresh features train eval precompute deploy-bundle synthetic api api-fake web test lint
 
 ## Python env with training + dev extras (torch, matplotlib, pytest, ruff)
 setup:
@@ -12,6 +12,17 @@ setup:
 ## Real data: pull game lists + play-by-play from stats.nba.com (1-2 hours, resumable)
 pull:
 	$(PY) -m pipeline.pull
+
+## Check stats.nba.com access with a handful of games before the long pull
+pull-smoke:
+	$(PY) -m pipeline.pull --limit 5
+
+## New games since the last pull -> replay bundle (no retraining). Run weekly.
+refresh:
+	$(PY) -m pipeline.pull
+	$(PY) -m pipeline.features
+	$(PY) -m api.precompute
+	$(PY) -m api.precompute --seasons 2024-25 2025-26 2026-27 --out api/data
 
 ## Build one feature row per play -> data/features.parquet
 features:

@@ -265,6 +265,7 @@ def update_readme(markdown_tables: str) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
     meta = load_meta()
     split = split_by_season(load_features())
     test = split.test

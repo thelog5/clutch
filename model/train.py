@@ -82,6 +82,33 @@ def train_xgboost(x, y, xv, yv):
     return booster[: booster.best_iteration + 1]
 
 
+def _train_mlp_child(epochs: int, out_path: str) -> None:
+    """Runs in a fresh process: see ``train_mlp_isolated``."""
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    split = split_by_season(load_features())
+    x, y = xy(split.train)
+    xv, yv = xy(split.val)
+    params = mlp.train(x, y, xv, yv, epochs=epochs)
+    params.pop("best_val_logloss")
+    np.savez(out_path, **params)
+
+
+def train_mlp_isolated(epochs: int, out_path) -> None:
+    """Train the MLP in a spawned process.
+
+    On macOS, XGBoost (Homebrew libomp) and PyTorch (its own bundled OpenMP)
+    deadlock when both run OpenMP work in one process: torch hangs at 0% CPU
+    after an XGBoost fit. A spawned child starts clean, with only torch loaded.
+    """
+    import multiprocessing as mp
+
+    proc = mp.get_context("spawn").Process(target=_train_mlp_child, args=(epochs, str(out_path)))
+    proc.start()
+    proc.join()
+    if proc.exitcode != 0:
+        raise RuntimeError(f"MLP training process exited with {proc.exitcode}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-mlp", action="store_true", help="R9 fallback: baseline + XGBoost only")
@@ -113,9 +140,7 @@ def main() -> None:
     names = ["logreg", "xgboost"]
     if not args.skip_mlp:
         t = time.time()
-        params = mlp.train(x, y, xv, yv, epochs=args.mlp_epochs)
-        params.pop("best_val_logloss")
-        np.savez(out / "mlp.npz", **params)
+        train_mlp_isolated(args.mlp_epochs, out / "mlp.npz")
         timings["mlp"] = time.time() - t
         names.append("mlp")
         log.info("mlp trained in %.1fs", timings["mlp"])

@@ -106,4 +106,4 @@ def forward_numpy(params: dict, x: np.ndarray) -> np.ndarray:
         h = h @ params[f"w{i}"] + params[f"b{i}"]
         if i < n_layers - 1:
             h = np.maximum(h, 0.0)
-    return 1.0 / (1.0 + np.exp(-h[:, 0]))
+    return 1.0 / (1.0 + np.exp(-np.clip(h[:, 0], -40.0, 40.0)))

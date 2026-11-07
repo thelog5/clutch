@@ -104,9 +104,8 @@ class GameStore:
             g = g[g["game_date"] == date]
         if q:
             ql = q.lower().strip()
-            hay = (
-                g["home_abbr"] + " " + g["home_name"] + " " + g["away_abbr"] + " " + g["away_name"] + " " + g["game_date"]
-            ).str.lower()
+            cols = ["home_abbr", "home_name", "away_abbr", "away_name", "game_date"]
+            hay = g[cols].astype(str).agg(" ".join, axis=1).str.lower()
             for word in ql.split():
                 g = g[hay.loc[g.index].str.contains(word, regex=False)]
         if sort == "swing":

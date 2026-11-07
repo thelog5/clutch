@@ -26,7 +26,6 @@ from api import settings
 from api.series import play_records, to_series
 from pipeline.actions import format_clock, from_live
 from pipeline.features import build_features
-from pipeline.teams import BY_ID
 
 log = logging.getLogger("api.live")
 

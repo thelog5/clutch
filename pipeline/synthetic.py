@@ -38,6 +38,8 @@ log = logging.getLogger("pipeline.synthetic")
 HOME_EDGE_PPP = 0.0125  # ~2.5 points per game
 STRENGTH_CARRY = 0.65  # how much of last season's strength carries over
 STRENGTH_SD = 3.8  # new spread each season, points per game
+JERSEYS = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 20, 21, 22, 23, 24, 30, 33]
+SHOT_KINDS = ["Driving Layup", "Pullup Jump Shot", "Dunk", "Floating Jump Shot"]
 V3_COLUMNS = [
     "gameId", "actionNumber", "clock", "period", "teamId", "teamTricode", "personId",
     "playerName", "playerNameI", "xLegacy", "yLegacy", "shotDistance", "shotResult",
@@ -68,7 +70,7 @@ class GameSim:
 
     # -- recording -------------------------------------------------------
     def player(self, side: str) -> str:
-        return f"{self.team[side]['abbr']} #{self.rng.choice([0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 20, 21, 22, 23, 24, 30, 33])}"
+        return f"{self.team[side]['abbr']} #{self.rng.choice(JERSEYS)}"
 
     def emit(self, period, clock, side, action_type, desc, sub_type="", shot_result="", is_fg=0, scored=False):
         self.n += 1 + (self.rng.random() < 0.3)  # real action numbers have gaps
@@ -118,7 +120,8 @@ class GameSim:
                 off = "h" if rng.random() < 0.5 else "v"
                 if period == 1:
                     off = tip_winner
-                self.emit(period, clock, off, "Jump Ball", f"Jump Ball: Tip to {self.player(off)}", sub_type="recovered")
+                tip = f"Jump Ball: Tip to {self.player(off)}"
+                self.emit(period, clock, off, "Jump Ball", tip, sub_type="recovered")
             else:
                 loser = "v" if tip_winner == "h" else "h"
                 off = loser if period in (2, 3) else tip_winner
@@ -150,7 +153,8 @@ class GameSim:
             dur = min(24.0, max(3.0, rng.gauss(14.3, 5.0)))
         if rng.random() < 0.02:  # occasional timeout before the possession
             caller = d if late and lead > 0 else rng.choice(["h", "v"])
-            self.emit(period, clock, caller, "Timeout", f"{self.team[caller]['abbr']} Timeout: Regular", sub_type="regular")
+            label = f"{self.team[caller]['abbr']} Timeout: Regular"
+            self.emit(period, clock, caller, "Timeout", label, sub_type="regular")
 
         shots = 0
         while True:
@@ -174,7 +178,7 @@ class GameSim:
             if buzzer:
                 p -= 0.12
             shooter = self.player(off)
-            kind = "3PT Jump Shot" if three else rng.choice(["Driving Layup", "Pullup Jump Shot", "Dunk", "Floating Jump Shot"])
+            kind = "3PT Jump Shot" if three else rng.choice(SHOT_KINDS)
             if rng.random() < p:
                 self.score[off] += value
                 self.emit(

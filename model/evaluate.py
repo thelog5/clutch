@@ -146,7 +146,8 @@ def plot_calibration(results: dict, path, dark: bool = False) -> None:
         ax.set_ylim(0, 1)
         ax.set_aspect("equal", adjustable="box")
         ax.set_title(LABELS.get(name, name), color=ink, fontsize=12, loc="left", pad=22, fontweight="bold")
-        ax.text(0, 1.04, f"Brier {r['brier']:.4f} · ECE {r['ece'] * 100:.2f} pts · worst bin {r['max_bin_gap'] * 100:.1f} pts",
+        stats = f"Brier {r['brier']:.4f} · ECE {r['ece'] * 100:.2f} pts · worst bin {r['max_bin_gap'] * 100:.1f} pts"
+        ax.text(0, 1.04, stats,
                 transform=ax.transAxes, color=ink2, fontsize=9)  # fmt: skip
         if col == 0:
             ax.set_ylabel("Share of plays the home team went on to win", color=ink2, fontsize=9)

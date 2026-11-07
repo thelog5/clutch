@@ -26,6 +26,13 @@ PLAYS_PATH = DATA_DIR / "plays.parquet"
 FEATURES_PATH = DATA_DIR / "features.parquet"
 SERIES_DIR = DATA_DIR / "series"
 
+# Real-data model artifacts and reports live in the repo (they're small and the
+# deployed API needs them). Any other dataset keeps its own copies next to the
+# data so a synthetic run can never overwrite the real model.
+_REAL_DATA = DATA_DIR.resolve() == (ROOT / "data").resolve()
+ARTIFACTS_DIR = ROOT / "model" / "artifacts" if _REAL_DATA else DATA_DIR / "artifacts"
+REPORTS_DIR = ROOT / "reports" if _REAL_DATA else DATA_DIR / "reports"
+
 # Seasons with play-by-play. Split by season, never by row (PRD "Data and model").
 TRAIN_SEASONS = ["2021-22", "2022-23", "2023-24"]
 VAL_SEASON = "2024-25"

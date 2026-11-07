@@ -111,8 +111,9 @@ replay series and team strengths. The model isn't retrained. Commit
 | `WS /games/{id}/live` | Pushes each new play's probability during a live game |
 | `GET /health`, `GET /meta` | Status, data source, model; seasons and teams for filters |
 
-Every pushed message carries the play description, clock, score, probability
-and the change from the previous play. Replay is served from precomputed files
+Every pushed play message carries the play description, clock, score,
+probability and the change from the previous play. Live streams also send a
+`heartbeat` after each poll so the page can show how fresh the feed is. Replay is served from precomputed files
 and never calls the NBA site; live mode polls every 5 seconds, well inside the
 15-second target.
 

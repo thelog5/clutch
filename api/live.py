@@ -325,6 +325,8 @@ class LiveHub:
             return
         lg.last_poll = time.time()
         self.apply(lg, actions)
+        # Lets the page show how fresh the feed is even when nothing happened.
+        self._broadcast(lg, {"type": "heartbeat", "polled_at": lg.last_poll})
 
     def apply(self, lg: LiveGame, actions: list[dict]) -> None:
         """Recompute the series from every action seen so far and push what's new."""

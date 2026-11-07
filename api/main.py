@@ -160,6 +160,7 @@ async def live(ws: WebSocket, game_id: str):
             await hub().poll_once(lg)
             while not queue.empty():  # history goes out in the init message instead
                 queue.get_nowait()
+        # (afterwards the queue carries play / reset / status / heartbeat messages)
         await ws.send_json(
             {"type": "init", "mode": "live", "game": lg.info, "plays": lg.plays, "final": lg.final}
         )

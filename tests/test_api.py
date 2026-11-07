@@ -167,3 +167,20 @@ def test_fake_live_games_are_not_replays(api_settings, monkeypatch):
         with c.websocket_connect(f"/games/{live['id']}/live") as ws:
             init = ws.receive_json()
             assert init["type"] == "init" and init["mode"] == "live"
+
+
+def test_live_poll_sends_heartbeat(bundle):
+    from model.predict import WinProbModel
+
+    class OneShot:
+        def actions(self, game_id):
+            return [{"actionNumber": 1, "clock": "PT11M40.00S", "period": 1, "teamId": 10, "actionType": "2pt",
+                     "shotResult": "Made", "scoreHome": "2", "scoreAway": "0", "description": "A Layup"}]  # fmt: skip
+
+    hub = LiveHub(OneShot(), store=None, model=WinProbModel("logreg", bundle["artifacts"]))
+    lg = LiveGame({"id": "L2", "home": {"id": 10}, "away": {"id": 20}}, strength_gap=0.0)
+    q: asyncio.Queue = asyncio.Queue()
+    lg.subscribers.add(q)
+    asyncio.run(hub.poll_once(lg))
+    kinds = [q.get_nowait()["type"] for _ in range(q.qsize())]
+    assert kinds == ["play", "heartbeat"]

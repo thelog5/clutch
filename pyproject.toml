@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "clutch"
 version = "0.1.0"
@@ -28,6 +32,9 @@ dev = [
     "pytest>=8",
     "ruff>=0.6",
 ]
+
+[tool.setuptools.packages.find]
+include = ["pipeline*", "model*", "api*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -558,3 +558,136 @@ select {
     display: none;
   }
 }
+
+/* -- home ------------------------------------------------------------ */
+.hero {
+  padding-top: 48px;
+}
+.hero-title {
+  font-size: clamp(2.6rem, 7.5vw, 5.25rem);
+  line-height: 0.95;
+  max-width: 14ch;
+  letter-spacing: -0.005em;
+}
+.hero-figure {
+  margin: 32px 0 0;
+}
+.hero-figure figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+.hero-game {
+  font-weight: 600;
+  text-decoration: none;
+}
+.hero-game:hover {
+  text-decoration: underline;
+}
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 14px;
+}
+
+.game-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.game-list li {
+  border-bottom: 1px solid var(--line);
+}
+.game-row {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  text-decoration: none;
+}
+.game-row:hover {
+  background: var(--shade);
+}
+.row-status {
+  color: var(--ink-2);
+  font-size: var(--step--1);
+}
+.row-teams {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--ink-2);
+}
+.row-teams .winner {
+  color: var(--ink);
+}
+.row-teams .muted {
+  font-family: var(--body);
+  font-weight: 400;
+  font-size: var(--step--1);
+}
+.row-swing {
+  font-size: var(--step--1);
+}
+
+.tug {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.tug-bar {
+  display: inline-flex;
+  width: 120px;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  gap: 2px;
+  background: var(--surface);
+}
+.tug-bar > span {
+  display: block;
+  height: 100%;
+}
+.tug-label {
+  font-weight: 600;
+  min-width: 64px;
+  font-size: var(--step--1);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+.field.grow {
+  flex: 1 1 220px;
+}
+.result-count {
+  font-size: var(--step--1);
+  margin: 0 0 6px;
+}
+
+@media (max-width: 640px) {
+  .game-row {
+    grid-template-columns: 1fr auto;
+  }
+  .row-status {
+    grid-column: 1 / -1;
+  }
+  .tug-bar {
+    width: 72px;
+  }
+  .filters .field:not(.grow) {
+    flex: 1 1 30%;
+  }
+}

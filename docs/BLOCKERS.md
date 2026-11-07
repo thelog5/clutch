@@ -71,8 +71,8 @@ what to run or click. Tick them off as you go.
   with `ffmpeg -i in.mov -vf "fps=15,scale=960:-1" docs/demo.gif`). Then
   uncomment the GIF line near the top of the README.
 
-- [ ] **B8. Show the calibration plot in the README.** After `make train` on
-  real data, uncomment the `<picture>` block under Results in the README
-  (it points at `reports/calibration.png` and the dark variant) and commit
-  `reports/`.
+- [ ] **B8. Commit the real results.** `make train` on real data rewrites the
+  README's Results section (numbers, model acceptance checks, calibration
+  plot) and writes `reports/`. Review it, then commit `README.md`,
+  `reports/` and `model/artifacts/`.
 

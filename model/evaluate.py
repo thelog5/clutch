@@ -168,7 +168,8 @@ def plot_calibration(results: dict, path, dark: bool = False) -> None:
     plt.close(fig)
 
 
-def write_markdown(results: dict, meta: dict, source: str) -> str:
+def _sections(results: dict, meta: dict) -> dict:
+    """Tables and checks shared by eval.md and the README results block."""
     names = list(results)
     head = "| Metric | " + " | ".join(LABELS.get(n, n) for n in names) + " |"
     sep = "| --- |" + " --- |" * len(names)
@@ -210,6 +211,17 @@ def write_markdown(results: dict, meta: dict, source: str) -> str:
     ]
 
     train = meta["split"]["train"]
+    test = meta["split"]["test"]
+    intro = (
+        f"Test season **{test['seasons'][0]}**: {test['games']:,} games, {test['plays']:,} plays. "
+        f"Trained on {', '.join(train['seasons'])}: **{train['games']:,} games, {train['plays']:,} plays**. "
+        f"Production model (best validation Brier): **{LABELS.get(prod, prod)}**."
+    )
+    return {"resume": resume, "phases": phases, "sanity": sanity, "checks": checks, "intro": intro}
+
+
+def write_markdown(results: dict, meta: dict, source: str) -> str:
+    s = _sections(results, meta)
     banner = ""
     if source == "synthetic":
         banner = (
@@ -220,19 +232,15 @@ def write_markdown(results: dict, meta: dict, source: str) -> str:
         [
             "# Evaluation report",
             "",
-            banner
-            + f"Test season **{meta['split']['test']['seasons'][0]}**: "
-            f"{meta['split']['test']['games']:,} games, {meta['split']['test']['plays']:,} plays. "
-            f"Trained on {', '.join(train['seasons'])}: **{train['games']:,} games, {train['plays']:,} plays**. "
-            f"Production model (best validation Brier): **{LABELS.get(prod, prod)}**.",
+            banner + s["intro"],
             "",
             "## Headline numbers",
             "",
-            *resume,
+            *s["resume"],
             "",
             "## Acceptance checks",
             "",
-            *checks,
+            *s["checks"],
             "",
             "## Calibration",
             "",
@@ -240,12 +248,33 @@ def write_markdown(results: dict, meta: dict, source: str) -> str:
             "",
             "## Brier score by game phase",
             "",
-            *phases,
+            *s["phases"],
             "",
             "## Sanity checks",
             "",
-            *sanity,
+            *s["sanity"],
             "",
+        ]
+    )
+
+
+def readme_block(results: dict, meta: dict) -> str:
+    """The README's results section: numbers, the two model checks, the plot."""
+    s = _sections(results, meta)
+    return "\n".join(
+        [
+            s["intro"],
+            "",
+            *s["resume"],
+            "",
+            *s["checks"],
+            "",
+            "<picture>",
+            '  <source media="(prefers-color-scheme: dark)" srcset="reports/calibration-dark.png">',
+            '  <img alt="Calibration of each model on the test season" src="reports/calibration.png">',
+            "</picture>",
+            "",
+            "Full report, including scores by game phase and sanity checks: [reports/eval.md](reports/eval.md).",
         ]
     )
 
@@ -254,14 +283,16 @@ README_START = "<!-- results:start -->"
 README_END = "<!-- results:end -->"
 
 
-def update_readme(markdown_tables: str) -> None:
-    readme = config.ROOT / "README.md"
+def update_readme(block_md: str, readme=None) -> bool:
+    """Replace the text between the results markers. Returns False if they're missing."""
+    readme = readme or config.ROOT / "README.md"
     text = readme.read_text()
-    if README_START not in text:
-        return
-    block = f"{README_START}\n{markdown_tables}\n{README_END}"
-    text = re.sub(re.escape(README_START) + r".*?" + re.escape(README_END), block, text, flags=re.S)
+    if README_START not in text or README_END not in text:
+        return False
+    block = f"{README_START}\n{block_md}\n{README_END}"
+    text = re.sub(re.escape(README_START) + r".*?" + re.escape(README_END), lambda _: block, text, flags=re.S)
     readme.write_text(text)
+    return True
 
 
 def main() -> None:
@@ -292,8 +323,7 @@ def main() -> None:
     md = write_markdown(results, meta, source)
     (out / "eval.md").write_text(md)
     if source == "nba":
-        section = md.split("## Headline numbers", 1)[1].split("## Calibration", 1)[0]
-        update_readme("## Results" + section.rstrip())
+        update_readme(readme_block(results, meta))
     log.info("report written to %s", out)
 
 

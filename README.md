@@ -52,21 +52,15 @@ are exported to numpy, so the deployed API doesn't need torch.
 ## Results
 
 <!-- results:start -->
-Pending the real data pull. `make train` fills this section in from
-`reports/eval.md` (see [docs/BLOCKERS.md](docs/BLOCKERS.md), B1).
+Pending the real data pull ([docs/BLOCKERS.md](docs/BLOCKERS.md), B1). `make train`
+writes this section from the test-season evaluation: Brier score, log loss,
+expected calibration error and last-two-minutes Brier for each model, the
+games and plays used for training, the two model acceptance checks (beat the
+baseline; every calibration bin within 5 points) and the calibration plot.
 <!-- results:end -->
 
-<!-- TODO(logan): uncomment once reports/calibration*.png exist from real data
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="reports/calibration-dark.png">
-  <img alt="Calibration of each model on the 2025-26 test season" src="reports/calibration.png">
-</picture>
--->
+### Other acceptance criteria
 
-### Acceptance criteria
-
-- [ ] XGBoost or the MLP beats the logistic regression baseline on Brier score for the test season
-- [ ] Calibration plot saved to the README, with every bin within 5 points of the diagonal
 - [x] No game from the test season appears in training data, checked by a test (`tests/test_split.py`)
 - [ ] Replay works on the deployed site for any game from the last two seasons
 - [ ] Live mode tested during at least one real game, deployed or local

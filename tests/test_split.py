@@ -79,3 +79,16 @@ def test_trained_model_split_excludes_test_season():
     assert config.TEST_SEASON not in meta["split"]["train"]["seasons"]
     assert config.TEST_SEASON not in meta["split"]["val"]["seasons"]
     assert meta["split"]["test"]["seasons"] == [config.TEST_SEASON]
+
+
+def test_readme_results_block_replaced(tmp_path):
+    from model.evaluate import README_END, README_START, update_readme
+
+    readme = tmp_path / "README.md"
+    readme.write_text(f"# X\n\n## Results\n\n{README_START}\nPending\n{README_END}\n\n## Next\n")
+    assert update_readme("| a | b |\n\\1 literal backref text", readme)
+    text = readme.read_text()
+    assert "Pending" not in text and "\\1 literal backref text" in text
+    assert text.count("## Results") == 1 and text.endswith("## Next\n")
+    readme.write_text("# no markers\n")
+    assert not update_readme("x", readme)

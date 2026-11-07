@@ -360,3 +360,201 @@ select {
 .delta.down {
   color: var(--down);
 }
+
+/* -- game page ------------------------------------------------------- */
+.back {
+  display: inline-block;
+  margin: 20px 0 8px;
+  color: var(--ink-2);
+  text-decoration: none;
+  font-weight: 500;
+}
+.back:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.game-header {
+  margin-top: 8px;
+}
+.matchup {
+  display: grid;
+  gap: 2px;
+}
+.side {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  color: var(--ink-2);
+}
+.side.won {
+  color: var(--ink);
+}
+.team-name {
+  font-size: var(--step-4);
+  font-weight: 700;
+  line-height: 1.05;
+}
+.team-score {
+  font-size: var(--step-4);
+  font-weight: 800;
+  line-height: 1.05;
+}
+.home-tag {
+  font-family: var(--body);
+  font-size: var(--step--1);
+  font-weight: 500;
+  color: var(--ink-3);
+  vertical-align: middle;
+  margin-left: 6px;
+}
+.game-meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: var(--ink-2);
+  margin: 10px 0 0;
+}
+
+.big-prob {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin: 28px 0 8px;
+}
+.big-num {
+  font-size: var(--hero-num);
+  line-height: 0.82;
+  letter-spacing: -0.01em;
+}
+.big-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 6px;
+}
+.big-team {
+  font-weight: 600;
+  font-size: var(--step-1);
+}
+
+.chart-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 4px 4px 4px;
+  margin-top: 16px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.progress {
+  font-size: var(--step--1);
+  margin-left: 4px;
+}
+.copy-link {
+  margin-left: auto;
+}
+
+.swing {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px;
+  align-items: start;
+  margin-top: 28px;
+  padding: 20px 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.swing-size {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+.swing-size .display {
+  font-size: 4.5rem;
+  line-height: 0.85;
+}
+.swing-unit {
+  font-size: var(--step--1);
+  color: var(--ink-2);
+  max-width: 16ch;
+  margin-top: 6px;
+}
+.swing-body h3 {
+  font-size: var(--step-0);
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+.swing-play {
+  font-size: var(--step-2);
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 8px;
+}
+.swing-body p.muted {
+  margin: 0;
+  max-width: 64ch;
+}
+
+.feed-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--step--1);
+}
+.feed-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 8px 8px 0;
+}
+.feed-table td {
+  border-bottom: 1px solid var(--line-soft);
+  padding: 8px 8px 8px 0;
+  vertical-align: top;
+}
+.r {
+  text-align: right;
+}
+.nowrap {
+  white-space: nowrap;
+}
+.feed-more {
+  margin-top: 12px;
+}
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--down);
+}
+.live-pill::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+@media (max-width: 640px) {
+  .swing {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .copy-link {
+    margin-left: 0;
+  }
+  .feed-table th:nth-child(4),
+  .feed-table td:nth-child(4) {
+    display: none;
+  }
+}

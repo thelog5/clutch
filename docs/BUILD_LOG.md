@@ -36,3 +36,4 @@ the exact commit for a line, run `git log --grep "Block: <id>"`.
 | 2026-11-07 04:36 EST | P9 | pull also fetches 2026-27 finished games for replay only (split never includes it); current-season game list re-fetched each run instead of cached |
 | 2026-11-07 04:36 EST | A1 | api/settings.py (env-driven paths, live source, poll interval, replay pacing) + api/series.py (displayable plays with prob/delta, JSON play records, biggest swing) shared by precompute and live |
 | 2026-11-07 04:37 EST | A2 | api/precompute.py: score every play with the production model -> series.parquet (zstd, small row groups), games.parquet index with biggest swing + closeness, team_strength.json for live; --seasons/--out for a slim deploy bundle |
+| 2026-11-07 04:37 EST | A3 | api/store.py: games index in memory (search by team/season/date/free text, sort by date/biggest swing/closeness), series read per game via Parquet row-group filter + LRU cache |

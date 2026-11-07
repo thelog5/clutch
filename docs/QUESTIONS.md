@@ -83,8 +83,10 @@ colors in `web/src/teams.ts`.
 > Answer:
 
 ### Q9. Site address and names
-What should the Vercel project / domain be (e.g. `clutch-nba.vercel.app`)? I
-left `CLUTCH_CORS_ORIGINS` for you to set once you know it.
+Both services are on Render now (your call), so the site will be at
+`https://clutch-web.onrender.com` or similar. Want a custom domain or
+subdomain instead (e.g. `clutch.yourdomain.com`)? Render's free workspace
+plan includes 2 custom domains, shared with your existing site.
 
 > Answer:
 

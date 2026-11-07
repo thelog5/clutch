@@ -128,7 +128,8 @@ and never calls the NBA site; live mode polls every 5 seconds, well inside the
 | `tests/` | Feature, split, model, API, framing tests |
 | `docs/` | [Build log](docs/BUILD_LOG.md), [open questions](docs/QUESTIONS.md), [blockers](docs/BLOCKERS.md), [design notes](docs/DESIGN.md) |
 
-Deploy: `render.yaml` (API on Render) and `web/vercel.json` (web on Vercel).
+Deploy: `render.yaml` sets up both the API (Render web service) and the website
+(Render static site) from one Blueprint.
 
 ## Notes
 

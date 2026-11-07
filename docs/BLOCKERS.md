@@ -36,21 +36,36 @@ what to run or click. Tick them off as you go.
   git commit -m "ci: enable GitHub Actions" && git push
   ```
 
-- [ ] **B3. Deploy the API on Render.** After B1:
+- [ ] **B3. Deploy the API and the website on Render** (next to your existing
+  site, in the same account). After B1:
   ```bash
   make deploy-bundle                 # writes api/data/ (last two seasons + current)
   git add api/data model/artifacts && git commit -m "data: deploy bundle" && git push
   ```
-  Then in Render: **New > Blueprint**, pick this repo (it reads `render.yaml`).
-  Set `CLUTCH_CORS_ORIGINS` to the Vercel URL from B4. Check
-  `https://<render-url>/health` shows `"data_source": "nba"`.
+  1. In Render: **New > Blueprint**, pick this repo. It reads `render.yaml`
+     and creates two services, `clutch-api` (free instance) and `clutch-web`
+     (static site, free). Your existing site isn't touched.
+  2. It asks for `VITE_API_URL`. Render names the API
+     `https://clutch-api.onrender.com`, or adds a suffix if that name is
+     taken, so leave it blank for now if you're not sure.
+  3. Once both exist, copy the API's URL from the `clutch-api` page, paste
+     it as `VITE_API_URL` on `clutch-web` (Environment), and choose **Save,
+     rebuild, and deploy**. The URL is baked in when the site builds.
+  4. Check `https://<api-url>/health` shows `"data_source": "nba"`, then open
+     the `clutch-web` URL and replay a game.
 
-- [ ] **B4. Deploy the web app on Vercel.** Import the repo, set **Root
-  Directory** to `web`, and add the env var `VITE_API_URL=https://<render-url>`.
-  `web/vercel.json` handles the build and SPA routing.
+  Cost: $0 on top of your current plan. The free API sleeps after 15 minutes
+  with no visitors and takes about a minute to wake. Your existing site is on
+  a paid instance, so the account's 750 free hours a month all go to
+  `clutch-api`, which is enough to run it all month. To keep it awake, set
+  its instance type to Starter ($7/mo) in the dashboard.
+
+- [x] **B4. ~~Deploy the web app on Vercel.~~** Not needed: the website is a
+  free Render static site, created by B3. (`web/vercel.json` still works if
+  you ever want Vercel instead.)
 
 - [ ] **B5. Test live polling from Render (PRD: first thing on day 2).** Open
-  `https://<render-url>/games/today`, then `/health`. If `live_ok` is `false`
+  `https://<api-url>/games/today`, then `/health`. If `live_ok` is `false`
   and `live_error` looks like a block or timeout, cdn.nba.com is refusing
   Render's IP: set `CLUTCH_LIVE_SOURCE=off` on Render (replay stays the public
   demo, per the PRD fallback) and run live mode locally instead.

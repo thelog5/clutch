@@ -1,6 +1,10 @@
-# Render blueprint for the Clutch API. Connect the GitHub repo in Render and
-# choose "New > Blueprint"; this file sets everything else up.
+# Render blueprint for Clutch: the API and the website, side by side in your
+# Render account. In Render choose "New > Blueprint" and pick this repo; it
+# creates the two services below and leaves any other services alone.
 services:
+  # The API: replay, live polling, model. Free instance (sleeps after 15
+  # minutes idle, about a minute to wake). Change `plan` to `starter` ($7/mo)
+  # to keep it awake.
   - type: web
     name: clutch-api
     runtime: python
@@ -9,6 +13,10 @@ services:
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     autoDeploy: true
+    buildFilter:
+      ignoredPaths:
+        - web/**
+        - docs/**
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
@@ -20,6 +28,34 @@ services:
       # "nba" polls cdn.nba.com for live games; set to "off" if Render's IP is blocked
       - key: CLUTCH_LIVE_SOURCE
         value: nba
-      # The Vercel URL of the web app, e.g. https://clutch.vercel.app
-      - key: CLUTCH_CORS_ORIGINS
+      # Optional: add CLUTCH_CORS_ORIGINS=https://<clutch-web url> in the
+      # dashboard to accept requests only from the site. Unset means any origin
+      # (the API is read-only public data).
+
+  # The website: a static site, free on every Render plan.
+  - type: web
+    name: clutch-web
+    runtime: static
+    buildCommand: cd web && npm ci && npm run build
+    staticPublishPath: web/dist
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - web/**
+    routes:
+      # Single-page app: every path that isn't a file serves index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      # Vite puts a content hash in every asset file name, so they never change
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      # The clutch-api URL, e.g. https://clutch-api.onrender.com. It's baked in
+      # at build time, so redeploy the site after setting or changing it.
+      - key: VITE_API_URL
         sync: false

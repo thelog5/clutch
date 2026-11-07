@@ -6,7 +6,7 @@ CLUTCH_ARTIFACTS     folder with the trained model (default: config.ARTIFACTS_DI
 CLUTCH_LIVE_SOURCE   "nba" (cdn.nba.com live feed), "fake" (replays stored games
                      as if live, for local testing), or "off"
 CLUTCH_POLL_SECONDS  live feed poll interval (PRD: new probability within 15s)
-CLUTCH_CORS_ORIGINS  comma-separated allowed origins for the web app
+CLUTCH_CORS_ORIGINS  comma-separated allowed origins for the web app (unset: any)
 """
 
 from __future__ import annotations
@@ -35,7 +35,8 @@ STRENGTH_PATH = API_DATA_DIR / "team_strength.json"
 LIVE_SOURCE = os.environ.get("CLUTCH_LIVE_SOURCE", "nba")
 POLL_SECONDS = float(os.environ.get("CLUTCH_POLL_SECONDS", "5"))
 SCOREBOARD_TTL_SECONDS = 15.0
-CORS_ORIGINS = [o.strip() for o in os.environ.get("CLUTCH_CORS_ORIGINS", "*").split(",") if o.strip()]
+# Unset or blank means any origin: the API only serves public, read-only data.
+CORS_ORIGINS = [o.strip() for o in os.environ.get("CLUTCH_CORS_ORIGINS", "").split(",") if o.strip()] or ["*"]
 
 REPLAY_SPEEDS = (1, 10, 60)
 # Plays at the same game-clock second (fouls, free throws) still get a beat.

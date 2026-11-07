@@ -12,7 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import type { Play, Team } from "../api";
-import { periodLabel, playMoment, points } from "../format";
+import { change, periodLabel, playMoment } from "../format";
 import { useMediaQuery, useTheme } from "../hooks/useTheme";
 import { pickColors } from "../teams";
 
@@ -174,7 +174,7 @@ export function ProbChart({ plays, home, away, swing, showCurrent = false, compa
                     {leader.abbr} {Math.round(share * 100)}%
                     {p.delta !== 0 && (
                       <span className={p.delta > 0 ? "delta up" : "delta down"}>
-                        {home.abbr} {points(p.delta)}
+                        {home.abbr} {change(p.delta)}
                       </span>
                     )}
                   </div>

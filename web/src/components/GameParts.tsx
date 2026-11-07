@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { GameSummary, Play } from "../api";
-import { gameDate, nickname, pct, playMoment, points, statusLine } from "../format";
+import { change, gameDate, nickname, pct, playMoment, statusLine, swingSize } from "../format";
 import { SPEEDS, type ReplayStatus } from "../hooks/useReplay";
 
 export function GameHeader({ game, current }: { game: GameSummary; current?: Play }) {
@@ -40,7 +40,7 @@ export function BigProb({ game, current }: { game: GameSummary; current?: Play }
     <div className="big-prob" aria-live="polite">
       <span className="big-num display num">{pct(p)}</span>
       <div className="big-label">
-        <span className="big-team">{home} chance to win</span>
+        <span className="big-team">chance the {home} win</span>
         <span className="muted num">
           {away} {pct(1 - p)}
         </span>
@@ -130,15 +130,15 @@ export function SwingCard({ game, swing, live }: { game: GameSummary; swing: Pla
   return (
     <section className="swing" aria-label="Biggest swing">
       <div className="swing-size">
-        <span className="display num">{Math.abs(swing.delta * 100).toFixed(0)}</span>
-        <span className="swing-unit">point swing toward {nickname(helped.name, helped.abbr)}</span>
+        <span className="display num">{swingSize(swing.delta)}</span>
+        <span className="swing-unit">swing toward the {nickname(helped.name, helped.abbr)}</span>
       </div>
       <div className="swing-body">
         <h3>{live ? "Biggest swing so far" : "Biggest swing"}</h3>
         <p className="swing-play">{swing.description}</p>
         <p className="muted num">
-          {playMoment(swing)}, {game.home.abbr} {swing.home_score}, {game.away.abbr} {swing.away_score}. {nickname(game.home.name, game.home.abbr)} chance to win went
-          from {pct(swing.prob - swing.delta)} to {pct(swing.prob)}.
+          {playMoment(swing)}, {game.away.abbr} {swing.away_score}, {game.home.abbr} {swing.home_score}. The chance the{" "}
+          {nickname(game.home.name, game.home.abbr)} win went from {pct(swing.prob - swing.delta)} to {pct(swing.prob)}.
         </p>
       </div>
     </section>
@@ -153,13 +153,14 @@ export function PlayFeed({ plays, game }: { plays: Play[]; game: GameSummary }) 
   return (
     <section className="feed" aria-label="Play by play">
       <h2 className="section-title">Play by play</h2>
+      <div className="table-scroll">
       <table className="feed-table">
         <thead>
           <tr>
             <th scope="col">Time</th>
             <th scope="col">Play</th>
             <th scope="col" className="r">
-              Score
+              {game.away.abbr}–{game.home.abbr}
             </th>
             <th scope="col" className="r">
               {game.home.abbr} chance
@@ -175,16 +176,17 @@ export function PlayFeed({ plays, game }: { plays: Play[]; game: GameSummary }) 
               <td className="num nowrap">{playMoment(p)}</td>
               <td>{p.description}</td>
               <td className="r num nowrap">
-                {p.home_score}–{p.away_score}
+                {p.away_score}–{p.home_score}
               </td>
               <td className="r num">{pct(p.prob)}</td>
               <td className={`r num nowrap delta ${p.delta > 0.0005 ? "up" : p.delta < -0.0005 ? "down" : ""}`}>
-                {Math.abs(p.delta) < 0.0005 ? "–" : points(p.delta)}
+                {Math.abs(p.delta) < 0.0005 ? "–" : change(p.delta)}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
       {recent.length > 12 && (
         <button className="feed-more" onClick={() => setAll(!all)}>
           {all ? "Show latest 12" : `Show all ${recent.length} plays`}

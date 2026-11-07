@@ -2,12 +2,18 @@ import type { GameSummary, Play } from "./api";
 
 export const pct = (p: number) => `${Math.round(p * 100)}%`;
 
-/** Signed change in percentage points, e.g. "+12.4 pts". */
-export function points(delta: number, digits = 1): string {
+/**
+ * Signed change in win probability, e.g. "+12.4%". (Strictly percentage points;
+ * "pts" would read as game points on a basketball page.)
+ */
+export function change(delta: number, digits = 1): string {
   const v = delta * 100;
   const sign = v > 0 ? "+" : v < 0 ? "−" : "";
-  return `${sign}${Math.abs(v).toFixed(digits)} pts`;
+  return `${sign}${Math.abs(v).toFixed(digits)}%`;
 }
+
+/** Size of a swing, e.g. "45%". */
+export const swingSize = (delta: number) => `${Math.abs(delta * 100).toFixed(0)}%`;
 
 export function periodLabel(period: number): string {
   if (period <= 4) return `Q${period}`;

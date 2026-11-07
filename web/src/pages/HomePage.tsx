@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type GameSummary, type Meta } from "../api";
 import { ProbChart } from "../components/ProbChart";
-import { nickname, pct, shortDate, statusLine } from "../format";
+import { gameDate, nickname, pct, shortDate, statusLine, swingSize } from "../format";
 import { useAsync } from "../hooks/useAsync";
 import { useTheme } from "../hooks/useTheme";
 import { pickColors } from "../teams";
@@ -44,7 +44,7 @@ function Hero({ meta }: { meta?: Meta }) {
               {f.game.away.name} at {f.game.home.name}
             </Link>
             <span className="muted num">
-              {shortDate(f.game.date)}, final {f.game.away.score}–{f.game.home.score}
+              {gameDate(f.game.date)}, final {f.game.away.score}–{f.game.home.score}
             </span>
           </figcaption>
           <div className="chart-panel">
@@ -56,7 +56,7 @@ function Hero({ meta }: { meta?: Meta }) {
             </Link>
             {f.biggest_swing && (
               <span className="muted">
-                Biggest swing: {Math.abs(f.biggest_swing.delta * 100).toFixed(0)} points on "{f.biggest_swing.description}"
+                Biggest swing: {swingSize(f.biggest_swing.delta)} on "{f.biggest_swing.description}"
               </span>
             )}
           </div>
@@ -250,7 +250,7 @@ function PastRow({ g }: { g: GameSummary }) {
           </span>
         </span>
         {g.biggest_swing && (
-          <span className="row-swing muted num">{Math.abs(g.biggest_swing.delta * 100).toFixed(0)}-point swing</span>
+          <span className="row-swing muted num">{swingSize(g.biggest_swing.delta)} swing</span>
         )}
       </Link>
     </li>

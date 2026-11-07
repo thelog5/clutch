@@ -297,3 +297,66 @@ select {
     animation: none !important;
   }
 }
+
+/* -- probability chart ----------------------------------------------- */
+.prob-chart {
+  position: relative;
+  width: 100%;
+}
+.edge-label {
+  position: absolute;
+  left: 8px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--step--1);
+  font-weight: 600;
+  color: var(--ink-2);
+  pointer-events: none;
+}
+.chip {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.chart-tip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  max-width: 280px;
+  box-shadow: 0 6px 24px rgba(10, 20, 40, 0.12);
+  font-size: var(--step--1);
+}
+.tip-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--ink-2);
+}
+.tip-prob {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 2px 0;
+}
+.tip-desc {
+  color: var(--ink);
+}
+.delta {
+  font-family: var(--body);
+  font-size: var(--step--1);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.delta.up {
+  color: var(--up);
+}
+.delta.down {
+  color: var(--down);
+}

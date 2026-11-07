@@ -7,7 +7,9 @@
 Flags:
   --limit N        fetch at most N new games (smoke test the pull)
   --skip-pbp       only refresh game lists
-  --seasons ...    override which seasons get play-by-play
+  --seasons ...    override which seasons get play-by-play (default: the five
+                   modeled seasons plus the current one, which is replay-only
+                   and never used for training)
 """
 
 from __future__ import annotations
@@ -28,7 +30,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--skip-pbp", action="store_true")
-    parser.add_argument("--seasons", nargs="*", default=config.SEASONS)
+    parser.add_argument("--seasons", nargs="*", default=[*config.SEASONS, config.CURRENT_SEASON])
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -43,6 +45,9 @@ def main() -> None:
         return
 
     modeled = games[games["season"].isin(args.seasons)]
+    if config.CURRENT_SEASON in args.seasons:
+        # Only finished games have complete play-by-play.
+        modeled = modeled[pd.to_datetime(modeled["game_date"]).dt.date < pd.Timestamp.now().date()]
     pull_all(modeled, limit=args.limit)
 
     plays = combine(modeled)

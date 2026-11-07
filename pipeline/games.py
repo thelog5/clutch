@@ -40,7 +40,8 @@ def _cache_path(season: str, season_type: str):
 def fetch_team_games(season: str, season_type: str = "Regular Season") -> pd.DataFrame:
     """Raw LeagueGameFinder team rows for one season, cached as Parquet."""
     path = _cache_path(season, season_type)
-    if path.exists():
+    # The season in progress gains games every night, so never trust its cache.
+    if path.exists() and season != config.CURRENT_SEASON:
         return pd.read_parquet(path)
 
     from nba_api.stats.endpoints import leaguegamefinder

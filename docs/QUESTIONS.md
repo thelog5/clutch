@@ -54,10 +54,15 @@ more alike, but compare `reports/eval.md` with and without it before keeping it.
 
 ### Q6. How should the replay data reach Render?
 The deployed API needs the precomputed series for the last two seasons plus
-this season (estimated 20-30 MB of Parquet). **Default used:**
-`make deploy-bundle` writes it to `api/data/` and it gets committed, so Render
-just deploys the repo. Alternatives: attach it to a GitHub Release and
-download it in the Render build step, or use Git LFS. Fine to commit it?
+this season. Measured on the synthetic set: 2,613 games / 950k plays = 16.7 MB
+of Parquet; real games have more plays and longer descriptions, so expect
+roughly 25-35 MB. **Default used:** `make deploy-bundle` writes it to
+`api/data/` and it gets committed, so Render just deploys the repo.
+
+Trade-off: every `make refresh` + commit adds another full copy to git history
+(weekly refreshes would add over 1 GB a year). If you plan to refresh often,
+the better option is a GitHub Release asset that Render downloads in its build
+step (I can wire that up), or Git LFS. Commit it, or switch to a release asset?
 
 > Answer:
 

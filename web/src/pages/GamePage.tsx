@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, type GameSummary, type Play } from "../api";
 import { ProbChart } from "../components/ProbChart";
@@ -104,6 +104,18 @@ function FinishedGame({ game }: { game: GameSummary }) {
   );
 }
 
+/** "Updated 4s ago": how fresh the live feed is (the PRD target is within 15s of a play). */
+function Freshness({ since }: { since: number | null }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  if (since === null) return null;
+  const secs = Math.max(0, Math.round((now - since) / 1000));
+  return <span className="muted num">{secs < 2 ? "Updated just now" : `Updated ${secs}s ago`}</span>;
+}
+
 function TonightGame({ game }: { game: GameSummary }) {
   const live = useLive(game.id, game.status !== "scheduled");
   const info = live.game ?? game;
@@ -129,6 +141,7 @@ function TonightGame({ game }: { game: GameSummary }) {
       <GameHeader game={{ ...info, status: live.status === "final" ? "final" : "live" }} current={current} />
       <p className="game-meta">
         {live.status === "live" && <span className="live-pill">Live</span>}
+        {live.status === "live" && <Freshness since={live.lastUpdate} />}
         {live.status === "reconnecting" && <span className="muted">Reconnecting to the live feed…</span>}
         {live.status === "final" && <span>Final</span>}
         {live.status === "unavailable" && <span className="muted">The live feed for this game isn't available.</span>}

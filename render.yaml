@@ -1,0 +1,25 @@
+# Render blueprint for the Clutch API. Connect the GitHub repo in Render and
+# choose "New > Blueprint"; this file sets everything else up.
+services:
+  - type: web
+    name: clutch-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-api.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      # Slim replay bundle committed by `make deploy-bundle` (last two seasons + current)
+      - key: CLUTCH_API_DATA
+        value: api/data
+      - key: CLUTCH_ARTIFACTS
+        value: model/artifacts
+      # "nba" polls cdn.nba.com for live games; set to "off" if Render's IP is blocked
+      - key: CLUTCH_LIVE_SOURCE
+        value: nba
+      # The Vercel URL of the web app, e.g. https://clutch.vercel.app
+      - key: CLUTCH_CORS_ORIGINS
+        sync: false

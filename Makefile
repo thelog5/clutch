@@ -1,7 +1,7 @@
 PY ?= .venv/bin/python
 UV ?= uv
 
-.PHONY: setup pull features train eval precompute synthetic api web test lint
+.PHONY: setup pull features train eval precompute deploy-bundle synthetic api api-fake web test lint
 
 ## Python env with training + dev extras (torch, matplotlib, pytest, ruff)
 setup:
@@ -29,6 +29,10 @@ eval:
 precompute:
 	$(PY) -m api.precompute
 
+## Slim bundle the deployed API serves: last two seasons + the current one -> api/data/
+deploy-bundle:
+	$(PY) -m api.precompute --seasons 2024-25 2025-26 2026-27 --out api/data
+
 ## Synthetic dataset for development (no network). Writes to data/synthetic/
 synthetic:
 	CLUTCH_DATA_DIR=data/synthetic $(PY) -m pipeline.synthetic
@@ -39,6 +43,10 @@ synthetic:
 
 api:
 	$(PY) -m uvicorn api.main:app --reload --port 8000
+
+## API on the synthetic dataset with fake live games (no network needed)
+api-fake:
+	CLUTCH_DATA_DIR=data/synthetic CLUTCH_LIVE_SOURCE=fake $(PY) -m uvicorn api.main:app --reload --port 8000
 
 web:
 	cd web && npm run dev

@@ -1,0 +1,12 @@
+# Runtime dependencies for the deployed API (Render). No torch: the MLP is
+# served from exported numpy weights. xgboost-cpu is the slim CPU-only wheel.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pandas>=2.2
+pyarrow>=16
+numpy>=1.26
+scikit-learn>=1.5
+xgboost-cpu>=2.1
+joblib>=1.4
+nba_api>=1.6
+httpx>=0.27

@@ -14,6 +14,10 @@ what to run or click. Tick them off as you go.
   ```bash
   make setup
   make pull-smoke  # 5 games: confirms stats.nba.com answers from your network
+  # Optional quick test first (~25 min): 150 games per season, then
+  #   make features train precompute && make api   (and make web)
+  # Sample results stay out of the README; the full pull reuses these games.
+  make pull-sample
   make pull        # 1-2 hours, cached per game in data/raw/
   make features    # builds data/features.parquet
   make train       # trains all three models + writes the eval report

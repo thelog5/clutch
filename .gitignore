@@ -7,10 +7,7 @@ __pycache__/
 *.egg-info/
 
 # Data: raw pulls and features are rebuilt locally, never committed
-data/raw/
-data/synthetic/
-data/*.parquet
-data/series/
+data/
 
 # Model artifacts are committed only from model/artifacts/ (small files)
 model/artifacts/*.tmp

@@ -64,3 +64,12 @@ def data_source() -> str:
     """'synthetic' when running on the generated dev dataset, else 'nba'."""
     marker = DATA_DIR / "SYNTHETIC"
     return "synthetic" if marker.exists() else "nba"
+
+
+# Written by `make pull-sample` (a few games per season, for a quick test run);
+# removed by the full `make pull`. Sample results never go into the README.
+SAMPLE_MARKER = DATA_DIR / "SAMPLE"
+
+
+def is_sample() -> bool:
+    return SAMPLE_MARKER.exists()

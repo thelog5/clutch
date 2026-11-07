@@ -322,7 +322,9 @@ def main() -> None:
     plot_calibration(results, out / "calibration-dark.png", dark=True)
     md = write_markdown(results, meta, source)
     (out / "eval.md").write_text(md)
-    if source == "nba":
+    if source == "nba" and config.is_sample():
+        log.info("sample data (make pull-sample): README left alone; the full `make pull` writes the real results")
+    elif source == "nba":
         update_readme(readme_block(results, meta))
     log.info("report written to %s", out)
 

@@ -1,7 +1,7 @@
 PY ?= .venv/bin/python
 UV ?= uv
 
-.PHONY: setup pull pull-smoke refresh features train eval precompute deploy-bundle synthetic api api-fake web test lint
+.PHONY: setup pull pull-smoke pull-sample refresh features train eval precompute deploy-bundle synthetic api api-fake web test lint
 
 ## Python env with training + dev extras (torch, matplotlib, pytest, ruff)
 setup:
@@ -16,6 +16,11 @@ pull:
 ## Check stats.nba.com access with a handful of games before the long pull
 pull-smoke:
 	$(PY) -m pipeline.pull --limit 5
+
+## Quick real-data test: 150 games per season (~25 min). The full pull reuses them.
+## Then: make features train precompute, make api, make web
+pull-sample:
+	$(PY) -m pipeline.pull --per-season 150
 
 ## New games since the last pull -> replay bundle (no retraining). Run weekly.
 refresh:

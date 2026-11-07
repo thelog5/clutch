@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Data: raw pulls and features are rebuilt locally, never committed
+data/raw/
+data/synthetic/
+data/*.parquet
+data/series/
+
+# Model artifacts are committed only from model/artifacts/ (small files)
+model/artifacts/*.tmp
+
+# Node
+node_modules/
+web/dist/
+.vercel/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.log
+.env
+.env.*
+!.env.example

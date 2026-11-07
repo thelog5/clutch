@@ -349,8 +349,15 @@ class LiveHub:
         else:  # the feed edited or removed earlier plays: resend everything
             lg.plays = plays
             self._broadcast(lg, {"type": "reset", "plays": plays})
-        if ended and not lg.final:
+        if ended and not lg.final and lg.plays:
+            # Game over: the last play's probability becomes the result.
+            last = lg.plays[-1]
+            final_row = feats.iloc[-1]  # includes the "game end" action's score
+            result = 1.0 if final_row["home_score"] > final_row["away_score"] else 0.0
+            before = last["prob"] - last["delta"]
+            lg.plays[-1] = {**last, "prob": result, "delta": round(result - before, 4)}
             lg.final = True
+            self._broadcast(lg, {"type": "reset", "plays": lg.plays})
             self._broadcast(lg, {"type": "status", "status": "final"})
 
     def _broadcast(self, lg: LiveGame, msg: dict) -> None:

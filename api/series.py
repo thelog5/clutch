@@ -45,6 +45,21 @@ def to_series(features: pd.DataFrame, probs: np.ndarray) -> pd.DataFrame:
     return df[SERIES_COLUMNS].reset_index(drop=True)
 
 
+def snap_final(series: pd.DataFrame, home_win: dict | pd.Series) -> pd.DataFrame:
+    """After a finished game's last play the result is known: show 100% or 0%.
+
+    The model can leave a little doubt at 0:00 of a one-point game; the chart
+    shouldn't. Display only: evaluation always scores raw model output.
+    """
+    out = series.copy()
+    last = out.groupby("game_id").tail(1).index
+    result = out.loc[last, "game_id"].map(home_win).astype(float)
+    before = out.loc[last, "prob"] - out.loc[last, "delta"]
+    out.loc[last, "prob"] = result.to_numpy()
+    out.loc[last, "delta"] = (result - before).round(4).to_numpy()
+    return out
+
+
 def play_records(series: pd.DataFrame) -> list[dict]:
     """JSON-ready play dicts for one game's series."""
     out = []

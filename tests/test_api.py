@@ -48,6 +48,8 @@ def test_series_shape(client):
     assert s["biggest_swing"]["i"] == biggest["i"]
     last = plays[-1]
     assert (last["home_score"], last["away_score"]) == (s["game"]["home"]["score"], s["game"]["away"]["score"])
+    # A finished game ends at the known result.
+    assert last["prob"] == (1.0 if s["game"]["home_win"] else 0.0)
     # Substitutions and period markers are not shown as plays.
     assert not any(p["description"].startswith("SUB:") for p in plays)
 
@@ -136,6 +138,7 @@ def test_live_hub_pushes_only_new_plays(bundle):
 
     # Feed correction: an earlier play changes -> full reset.
     acts[1] = act(2, 20, "3pt", "B 3PT Jump Shot", 2, 3, shotResult="Made")
+    acts[2] = act(3, 10, "rebound", "A REBOUND", 2, 3)
     hub.apply(lg, acts)
     m = q.get_nowait()
     assert m["type"] == "reset" and len(m["plays"]) == 3
@@ -143,3 +146,6 @@ def test_live_hub_pushes_only_new_plays(bundle):
     acts.append(act(4, 0, "game", "Game End", 2, 3, subType="end"))
     hub.apply(lg, acts)
     assert lg.final
+    assert lg.plays[-1]["prob"] == 0.0  # away team won 2-3
+    kinds = [q.get_nowait()["type"] for _ in range(q.qsize())]
+    assert kinds == ["reset", "status"]

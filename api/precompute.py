@@ -22,7 +22,7 @@ from pathlib import Path
 import pandas as pd
 
 from api import settings
-from api.series import to_series
+from api.series import snap_final, to_series
 from model.predict import load_meta, load_model
 from pipeline import config
 from pipeline.strength import current_strength
@@ -55,6 +55,7 @@ def write_bundle(feats: pd.DataFrame, games: pd.DataFrame, model, out: Path, syn
     out.mkdir(parents=True, exist_ok=True)
     series = to_series(feats, model.predict_frame(feats))
     series = series.sort_values(["game_id", "i"]).reset_index(drop=True)
+    series = snap_final(series, games.set_index("game_id")["home_win"])
     series.to_parquet(out / "series.parquet", index=False, compression="zstd", row_group_size=20_000)
 
     index = games[games["game_id"].isin(series["game_id"].unique())].set_index("game_id")

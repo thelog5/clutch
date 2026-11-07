@@ -71,6 +71,12 @@ def _scores(series: pd.Series) -> pd.Series:
     return pd.to_numeric(series.replace("", None), errors="coerce")
 
 
+def _game_ids(ids: pd.Series) -> pd.Series:
+    """Restore leading zeros on numeric NBA IDs ("22100001" -> "0022100001")."""
+    ids = ids.astype(str)
+    return ids.where(~ids.str.isdigit(), ids.str.zfill(10))
+
+
 def from_v3(raw: pd.DataFrame, home_team_id: int | None = None) -> pd.DataFrame:
     """Normalize a PlayByPlayV3 frame for one game."""
     df = raw.copy()
@@ -84,7 +90,7 @@ def from_v3(raw: pd.DataFrame, home_team_id: int | None = None) -> pd.DataFrame:
 
     out = pd.DataFrame(
         {
-            "game_id": df["gameId"].astype(str).str.zfill(10),
+            "game_id": _game_ids(df["gameId"]),
             "action_number": pd.to_numeric(df["actionNumber"], errors="coerce").astype("Int64"),
             "period": pd.to_numeric(df["period"], errors="coerce").astype("Int64"),
             "clock": df["clock"].fillna("").astype(str),

@@ -28,3 +28,4 @@ the exact commit for a line, run `git log --grep "Block: <id>"`.
 | 2026-11-07 04:19 EST | P6 | pipeline/features.py: vectorized per-play features (margin, seconds_left, is_ot, home_possession heuristic, strength_gap, margin_x_time) + home_win label; final-score check vs box score; writes features.parquet |
 | 2026-11-07 04:20 EST | P7 | pipeline/teams.py: 30 teams with stats.nba.com IDs, tricodes, city + nickname |
 | 2026-11-07 04:22 EST | P8 | pipeline/synthetic.py: possession-level game simulator (team strength, home edge, OREBs, FTs, OT, late-game fouling/clock milking) writing raw V3-shaped per-game Parquet + SYNTHETIC marker; verified features build on it (317 games / 120k plays smoke run) |
+| 2026-11-07 04:22 EST | T1 | tests/test_features.py + tests/test_strength.py (15 tests): clock parsing, seconds_left in reg/OT, score ffill, margin_x_time, possession heuristic, live-feed normalization, strength_gap uses only earlier games + last-season blend |

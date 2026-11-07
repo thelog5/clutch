@@ -82,6 +82,14 @@ def train_xgboost(x, y, xv, yv):
     return booster[: booster.best_iteration + 1]
 
 
+def fit_isotonic(p: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Isotonic map raw -> calibrated probability, as knots for np.interp."""
+    from sklearn.isotonic import IsotonicRegression
+
+    iso = IsotonicRegression(y_min=1e-4, y_max=1 - 1e-4, out_of_bounds="clip").fit(p, y)
+    return iso.X_thresholds_.astype(np.float64), iso.y_thresholds_.astype(np.float64)
+
+
 def _train_mlp_child(epochs: int, out_path: str) -> None:
     """Runs in a fresh process: see ``train_mlp_isolated``."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -113,6 +121,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-mlp", action="store_true", help="R9 fallback: baseline + XGBoost only")
     parser.add_argument("--mlp-epochs", type=int, default=30)
+    parser.add_argument(
+        "--calibrate",
+        action="store_true",
+        help="fit isotonic calibration on the validation season and apply it at predict time",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -151,7 +164,17 @@ def main() -> None:
         val_scores[name] = {"brier": float(brier_score_loss(yv, p)), "log_loss": float(log_loss(yv, p))}
         log.info("val %-8s brier %.5f  logloss %.5f", name, *val_scores[name].values())
 
+    # Chosen on raw validation scores; calibration below is fit on the same season.
     production = min(val_scores, key=lambda n: val_scores[n]["brier"])
+
+    for name in names:
+        cal_path = out / f"{name}_calibration.npz"
+        if cal_path.exists():
+            cal_path.unlink()
+        if args.calibrate:
+            xs, ys = fit_isotonic(WinProbModel(name, out).predict_array(xv), yv)
+            np.savez(cal_path, x=xs, y=ys)
+            log.info("%s: isotonic calibration with %d knots", name, len(xs))
     meta = {
         "trained_at": dt.datetime.now().isoformat(timespec="seconds"),
         "data_source": config.data_source(),
@@ -160,6 +183,7 @@ def main() -> None:
         "production": production,
         "split": summary,
         "val": val_scores,
+        "calibrated": bool(args.calibrate),
         "train_seconds": timings,
     }
     (out / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")

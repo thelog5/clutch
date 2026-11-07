@@ -45,6 +45,13 @@ class WinProbModel:
                 self._params = {k: f[k] for k in f.files}
         else:
             raise ValueError(f"unknown model {name!r}")
+        # Optional isotonic calibration (model.train --calibrate): a monotone
+        # lookup table from raw probability to calibrated probability.
+        self._calibration = None
+        cal = self.dir / f"{name}_calibration.npz"
+        if cal.exists():
+            with np.load(cal) as f:
+                self._calibration = (f["x"], f["y"])
 
     def predict_array(self, x: np.ndarray) -> np.ndarray:
         x = np.asarray(x, dtype=np.float32)
@@ -56,7 +63,17 @@ class WinProbModel:
             p = self._booster.predict(xgb.DMatrix(x, feature_names=FEATURES))
         else:
             p = forward_numpy(self._params, x)
-        return np.clip(p.astype(np.float64), 1e-6, 1 - 1e-6)
+        return np.clip(self.calibrate(p.astype(np.float64)), 1e-6, 1 - 1e-6)
+
+    def calibrate(self, p: np.ndarray) -> np.ndarray:
+        if self._calibration is None:
+            return p
+        xs, ys = self._calibration
+        return np.interp(p, xs, ys)
+
+    @property
+    def calibrated(self) -> bool:
+        return self._calibration is not None
 
     def predict_frame(self, df: pd.DataFrame) -> np.ndarray:
         return self.predict_array(df[FEATURES].to_numpy(dtype=np.float32))

@@ -45,6 +45,11 @@ calibration fit on the validation season. **Default used:** built as an
 opt-in flag (`python -m model.train --calibrate`), off unless you say so,
 so the headline numbers are the raw models. Use it if needed?
 
+Tried on synthetic data: it made the test season *worse* (worst bin 4.1 ->
+10.4 points, Brier 0.1147 -> 0.1170) because the simulated validation season
+has a different mix of team strengths than the test season. Real seasons are
+more alike, but compare `reports/eval.md` with and without it before keeping it.
+
 > Answer:
 
 ### Q6. How should the replay data reach Render?

@@ -36,3 +36,24 @@ def test_model_sanity(name):
     assert late_lead > half_lead > 0.5
     assert over > 0.97
     assert m.predict({"margin": 0, "seconds_left": 2880, "strength_gap": 8}) > tied
+
+
+def test_isotonic_calibration_applies(tmp_path, bundle):
+    import shutil
+
+    import numpy as np
+
+    from model.train import fit_isotonic
+
+    for f in bundle["artifacts"].iterdir():
+        shutil.copy(f, tmp_path / f.name)
+    raw = WinProbModel("logreg", tmp_path)
+    p = np.linspace(0.01, 0.99, 200)
+    y = (np.random.default_rng(0).random(200) < p**2).astype(float)  # truth is p^2: raw is overconfident
+    xs, ys = fit_isotonic(p, y)
+    assert np.all(np.diff(ys) >= 0), "calibration map must be monotone"
+    np.savez(tmp_path / "logreg_calibration.npz", x=xs, y=ys)
+    cal = WinProbModel("logreg", tmp_path)
+    assert cal.calibrated and not raw.calibrated
+    state = {"margin": 0, "seconds_left": 2880}
+    assert cal.predict(state) == pytest.approx(float(np.interp(raw.predict(state), xs, ys)), abs=1e-9)

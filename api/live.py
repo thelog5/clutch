@@ -86,8 +86,12 @@ class FakeLiveSource:
     """Stored games replayed as if they were on right now.
 
     Game k tips off ``k * stagger`` wall seconds after the server starts and
-    runs at ``speed`` game seconds per wall second.
+    runs at ``speed`` game seconds per wall second. Fake games get their own
+    IDs (``FAKE`` + stored ID) so the API treats them as tonight's games, not
+    as finished games available for replay.
     """
+
+    PREFIX = "FAKE"
 
     name = "fake"
 
@@ -140,7 +144,7 @@ class FakeLiveSource:
             secs = _clock_secs_iso(last["clock"]) if last else None
             out.append(
                 {
-                    "id": row["game_id"],
+                    "id": self.PREFIX + row["game_id"],
                     "status": status,
                     "status_text": "Final" if done else (f"Q{last['period']} {format_clock(secs)}" if last else "Soon"),
                     "period": int(last["period"]) if last else 0,
@@ -161,7 +165,7 @@ class FakeLiveSource:
 
     def actions(self, game_id: str) -> list[dict]:
         for row, offset in self.games:
-            if row["game_id"] == game_id:
+            if self.PREFIX + row["game_id"] == game_id:
                 acts = self._all_actions(row)
                 shown = self._visible(acts, offset)
                 if shown and len(shown) == len(acts):
@@ -254,7 +258,7 @@ class LiveHub:
             g["prob"] = self._board_prob(g)
         else:
             g["prob"] = self._pregame_prob(g) if self.model is not None else None
-        g["replay_available"] = self.store.game(g["id"]) is not None
+        g["replay_available"] = g["status"] == "final" and self.store.game(g["id"]) is not None
         return g
 
     def gap(self, g: dict) -> float:

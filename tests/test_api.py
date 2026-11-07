@@ -149,3 +149,21 @@ def test_live_hub_pushes_only_new_plays(bundle):
     assert lg.plays[-1]["prob"] == 0.0  # away team won 2-3
     kinds = [q.get_nowait()["type"] for _ in range(q.qsize())]
     assert kinds == ["reset", "status"]
+
+
+def test_fake_live_games_are_not_replays(api_settings, monkeypatch):
+    """Fake live games need their own IDs, or the game page would open them as finished replays."""
+    from fastapi.testclient import TestClient
+
+    from api.main import app
+
+    monkeypatch.setattr(api_settings, "LIVE_SOURCE", "fake")
+    with TestClient(app) as c:
+        games = c.get("/games/today").json()["games"]
+        assert games and all(g["id"].startswith("FAKE") for g in games)
+        live = games[0]
+        assert live["status"] == "live" and live["replay_available"] is False
+        assert c.get(f"/games/{live['id']}").json()["status"] == "live"
+        with c.websocket_connect(f"/games/{live['id']}/live") as ws:
+            init = ws.receive_json()
+            assert init["type"] == "init" and init["mode"] == "live"

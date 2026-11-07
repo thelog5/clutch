@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api, type GameSummary, type Meta } from "../api";
 import { ProbChart } from "../components/ProbChart";
 import { gameDate, nickname, pct, shortDate, statusLine, swingSize } from "../format";
@@ -8,6 +8,14 @@ import { useTheme } from "../hooks/useTheme";
 import { pickColors } from "../teams";
 
 export function HomePage({ meta }: { meta?: Meta }) {
+  // Header links point at /#tonight and /#past; scroll there once the page renders.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!hash) return;
+    const t = window.setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" }), 50);
+    return () => window.clearTimeout(t);
+  }, [hash]);
+
   return (
     <div className="wrap">
       <Hero meta={meta} />

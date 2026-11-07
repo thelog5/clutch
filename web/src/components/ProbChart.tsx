@@ -66,8 +66,15 @@ export function ProbChart({ plays, home, away, swing, showCurrent = false, compa
 
   const swingPoint = swing ? data.find((d) => d.i === swing.i) : undefined;
 
+  const first = data[0];
+  const summary = last
+    ? `Chance the ${home.abbr} win, play by play: ${Math.round(first.y)}% at the first play, ${Math.round(last.y)}% ` +
+      `after the latest (${playMoment(last)}).` +
+      (swingPoint ? ` Biggest swing ${Math.abs(swingPoint.delta * 100).toFixed(0)}% on ${swingPoint.description}.` : "")
+    : `Chance the ${home.abbr} win. No plays yet.`;
+
   return (
-    <div className="prob-chart" style={{ height }}>
+    <div className="prob-chart" style={{ height }} role="img" aria-label={summary}>
       <div className="edge-label edge-top" style={{ top: margin.top + 4 }}>
         <span className="chip" style={{ background: team.home }} aria-hidden />
         {home.abbr} wins

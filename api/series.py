@@ -54,7 +54,7 @@ def play_records(series: pd.DataFrame) -> list[dict]:
                 "i": int(r.i),
                 "period": int(r.period),
                 "clock": format_clock(r.clock_secs),
-                "elapsed": float(r.elapsed),
+                "elapsed": round(float(r.elapsed), 2),
                 "home_score": int(r.home_score),
                 "away_score": int(r.away_score),
                 "side": r.side,

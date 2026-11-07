@@ -19,3 +19,9 @@ what to run or click. Tick them off as you go.
   make precompute  # writes per-game probability series for the API
   ```
 
+- [x] **B0. GitHub rejected the first push (email privacy).** Your account blocks
+  pushes that expose `your personal email address`. I set **this repo only** to commit
+  as `170454143+thelog5@users.noreply.github.com` (`git config user.email`,
+  local to `clutch/`). Your global git config is untouched. Nothing to do
+  unless you'd rather commit with a different address.
+

@@ -19,3 +19,4 @@ the exact commit for a line, run `git log --grep "Block: <id>"`.
 | When | Block | What was done |
 | --- | --- | --- |
 | 2026-11-07 04:14 EST | S1 | Repo scaffold: README, .gitignore, build log + checkpoint script, QUESTIONS.md, BLOCKERS.md (B1: data pull blocked in sandbox) |
+| 2026-11-07 04:16 EST | S2 | pyproject.toml with pinned-floor deps (train/dev extras), Makefile targets for pull/features/train/precompute/synthetic/api/web/test |

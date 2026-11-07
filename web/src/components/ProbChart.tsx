@@ -148,10 +148,10 @@ export function ProbChart({ plays, home, away, swing, showCurrent = false, compa
           />
 
           {swingPoint && (
-            <ReferenceDot x={swingPoint.x} y={swingPoint.y} r={6} fill={colors.surface} stroke={colors.ink} strokeWidth={2} />
+            <ReferenceDot x={swingPoint.x} y={swingPoint.y} r={6} fill={colors.surface} stroke={colors.ink} strokeWidth={2} ifOverflow="visible" />
           )}
           {showCurrent && last && (
-            <ReferenceDot x={last.x} y={last.y} r={6} fill={colors.ball} stroke={colors.surface} strokeWidth={2} />
+            <ReferenceDot x={last.x} y={last.y} r={6} fill={colors.ball} stroke={colors.surface} strokeWidth={2} ifOverflow="visible" />
           )}
 
           <Tooltip

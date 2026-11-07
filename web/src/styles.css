@@ -712,3 +712,6 @@ input::placeholder {
     padding: 6px 6px;
   }
 }
+.feed-table th.r {
+  text-align: right;
+}

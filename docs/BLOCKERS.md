@@ -25,3 +25,13 @@ what to run or click. Tick them off as you go.
   local to `clutch/`). Your global git config is untouched. Nothing to do
   unless you'd rather commit with a different address.
 
+- [ ] **B2. Turn on CI (needs a GitHub token scope I don't have).** GitHub
+  refused the push of `.github/workflows/ci.yml` because the `gh` token lacks
+  the `workflow` scope. The workflow is parked at `ci/github-actions.yml`
+  (lint + tests + web build). To enable it:
+  ```bash
+  gh auth refresh -h github.com -s workflow
+  mkdir -p .github/workflows && git mv ci/github-actions.yml .github/workflows/ci.yml
+  git commit -m "ci: enable GitHub Actions" && git push
+  ```
+

@@ -24,3 +24,4 @@ the exact commit for a line, run `git log --grep "Block: <id>"`.
 | 2026-11-07 04:18 EST | P2 | pipeline/games.py: LeagueGameFinder per season (cached Parquet, retry/backoff), collapse home/away team rows into one game row with home_win |
 | 2026-11-07 04:18 EST | P3 | pipeline/actions.py: one canonical play schema; normalizers for PlayByPlayV3 (historical) and liveData (live) so training and live serving share feature code; clock parsing/formatting |
 | 2026-11-07 04:18 EST | P4 | pipeline/pbp.py + pipeline/pull.py: per-game cached PlayByPlayV3 pull with retries, jittered delay, ETA logging, failed.txt for resume; combine into canonical plays.parquet; --limit smoke-test flag |
+| 2026-11-07 04:19 EST | P5 | pipeline/strength.py: season-to-date point differential per game using only earlier games; blend toward last season's differential for first 10 games; current_strength() for live games |

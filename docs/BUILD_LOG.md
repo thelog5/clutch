@@ -25,3 +25,4 @@ the exact commit for a line, run `git log --grep "Block: <id>"`.
 | 2026-11-07 04:18 EST | P3 | pipeline/actions.py: one canonical play schema; normalizers for PlayByPlayV3 (historical) and liveData (live) so training and live serving share feature code; clock parsing/formatting |
 | 2026-11-07 04:18 EST | P4 | pipeline/pbp.py + pipeline/pull.py: per-game cached PlayByPlayV3 pull with retries, jittered delay, ETA logging, failed.txt for resume; combine into canonical plays.parquet; --limit smoke-test flag |
 | 2026-11-07 04:19 EST | P5 | pipeline/strength.py: season-to-date point differential per game using only earlier games; blend toward last season's differential for first 10 games; current_strength() for live games |
+| 2026-11-07 04:19 EST | P6 | pipeline/features.py: vectorized per-play features (margin, seconds_left, is_ot, home_possession heuristic, strength_gap, margin_x_time) + home_win label; final-score check vs box score; writes features.parquet |

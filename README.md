@@ -52,11 +52,24 @@ are exported to numpy, so the deployed API doesn't need torch.
 ## Results
 
 <!-- results:start -->
-Pending the real data pull ([docs/BLOCKERS.md](docs/BLOCKERS.md), B1). `make train`
-writes this section from the test-season evaluation: Brier score, log loss,
-expected calibration error and last-two-minutes Brier for each model, the
-games and plays used for training, the two model acceptance checks (beat the
-baseline; every calibration bin within 5 points) and the calibration plot.
+Test season **2025-26**: 1,229 games, 621,370 plays. Trained on 2021-22, 2022-23, 2023-24: **3,685 games, 1,800,726 plays**. Production model (best validation Brier): **Logistic regression**.
+
+| Metric | Logistic regression | XGBoost | MLP |
+| --- | --- | --- | --- |
+| Brier score | 0.1452 | 0.1454 | 0.1452 |
+| Log loss | 0.4375 | 0.4371 | 0.4371 |
+| Expected calibration error | 0.0099 | 0.0107 | 0.0126 |
+| Brier score, last 2 minutes only | 0.0471 | 0.0459 | 0.0475 |
+
+- [x] XGBoost or the MLP beats the logistic regression baseline on test Brier (MLP)
+- [x] Production model (Logistic regression) has every calibration bin within 5 points of the diagonal (bins with ≥200 plays)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="reports/calibration-dark.png">
+  <img alt="Calibration of each model on the test season" src="reports/calibration.png">
+</picture>
+
+Full report, including scores by game phase and sanity checks: [reports/eval.md](reports/eval.md).
 <!-- results:end -->
 
 ### Other acceptance criteria

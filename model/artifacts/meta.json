@@ -1,0 +1,65 @@
+{
+  "trained_at": "2026-11-08T02:32:52",
+  "data_source": "nba",
+  "features": [
+    "margin",
+    "seconds_left",
+    "is_ot",
+    "home_possession",
+    "strength_gap",
+    "margin_x_time"
+  ],
+  "models": [
+    "logreg",
+    "xgboost",
+    "mlp"
+  ],
+  "production": "logreg",
+  "sample": false,
+  "split": {
+    "train": {
+      "seasons": [
+        "2021-22",
+        "2022-23",
+        "2023-24"
+      ],
+      "games": 3685,
+      "plays": 1800726
+    },
+    "val": {
+      "seasons": [
+        "2024-25"
+      ],
+      "games": 1230,
+      "plays": 606536
+    },
+    "test": {
+      "seasons": [
+        "2025-26"
+      ],
+      "games": 1229,
+      "plays": 621370
+    }
+  },
+  "val": {
+    "logreg": {
+      "brier": 0.15050619227013032,
+      "log_loss": 0.4500842520403977
+    },
+    "xgboost": {
+      "brier": 0.15203209134399895,
+      "log_loss": 0.45442364978074307
+    },
+    "mlp": {
+      "brier": 0.15068974240707725,
+      "log_loss": 0.4505921958511283
+    }
+  },
+  "xgboost_trees": 101,
+  "calibrated": false,
+  "train_seconds": {
+    "logreg": 0.5245540142059326,
+    "xgboost": 4.19873309135437,
+    "mlp": 9.611886024475098
+  }
+}

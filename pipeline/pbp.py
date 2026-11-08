@@ -44,9 +44,10 @@ def pull_all(games: pd.DataFrame, limit: int | None = None) -> None:
     """Fetch and cache play-by-play for every game not already cached."""
     config.RAW_PBP_DIR.mkdir(parents=True, exist_ok=True)
     todo = [g for g in games["game_id"] if not cache_path(g).exists()]
+    cached = len(games) - len(todo)
     if limit:
         todo = todo[:limit]
-    log.info("%d games cached, %d to fetch", len(games) - len(todo), len(todo))
+    log.info("%d games cached, %d to fetch%s", cached, len(todo), f" (--limit {limit})" if limit else "")
 
     failed: list[str] = []
     started = time.time()

@@ -26,6 +26,12 @@ def finder_rows():
             {"SEASON_ID": "22025", "TEAM_ID": 1610612744, "TEAM_ABBREVIATION": "GSW",
              "TEAM_NAME": "Golden State Warriors",
              "GAME_ID": "0022500002", "GAME_DATE": "2025-10-22", "MATCHUP": "GSW vs. LAL", "WL": "L", "PTS": 118},
+            # Neutral site (Mexico City): both rows say "MIA @ WAS"; WAS is the designated home team.
+            {"SEASON_ID": "22024", "TEAM_ID": 1610612748, "TEAM_ABBREVIATION": "MIA", "TEAM_NAME": "Miami Heat",
+             "GAME_ID": "0022400147", "GAME_DATE": "2024-11-02", "MATCHUP": "MIA @ WAS", "WL": "W", "PTS": 118},
+            {"SEASON_ID": "22024", "TEAM_ID": 1610612764, "TEAM_ABBREVIATION": "WAS",
+             "TEAM_NAME": "Washington Wizards",
+             "GAME_ID": "0022400147", "GAME_DATE": "2024-11-02", "MATCHUP": "MIA @ WAS", "WL": "L", "PTS": 98},
             # A game with only one side returned is dropped, not half-filled.
             {"SEASON_ID": "22025", "TEAM_ID": 1610612752, "TEAM_ABBREVIATION": "NYK", "TEAM_NAME": "New York Knicks",
              "GAME_ID": "0022500003", "GAME_DATE": "2025-10-22", "MATCHUP": "NYK vs. MIA", "WL": "W", "PTS": 99},
@@ -35,7 +41,9 @@ def finder_rows():
 
 def test_collapse_to_games_home_and_away():
     g = collapse_to_games(finder_rows(), "2025-26", "Regular Season").set_index("game_id")
-    assert list(g.index) == ["0022500001", "0022500002"]
+    assert list(g.index) == ["0022400147", "0022500001", "0022500002"]
+    neutral = g.loc["0022400147"]
+    assert (neutral.home_abbr, neutral.away_abbr, neutral.home_win) == ("WAS", "MIA", 0)
     tor = g.loc["0022500001"]
     assert (tor.home_abbr, tor.away_abbr, tor.home_pts, tor.away_pts, tor.home_win) == ("TOR", "BOS", 110, 104, 1)
     gsw = g.loc["0022500002"]

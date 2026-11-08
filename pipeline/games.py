@@ -71,11 +71,23 @@ def fetch_team_games(season: str, season_type: str = "Regular Season") -> pd.Dat
     return df
 
 
+def home_abbr(matchup: pd.Series) -> pd.Series:
+    """The home team in MATCHUP: "TOR vs. BOS" -> TOR, "BOS @ TOR" -> TOR.
+
+    Neutral-site games (Mexico City, Paris, Berlin, London, the NBA Cup
+    semifinals in Las Vegas) come back as "MIA @ WAS" on *both* teams' rows;
+    the team after the "@" is the designated home team.
+    """
+    vs = matchup.str.extract(r"^(\w+) vs\. ", expand=False)
+    at = matchup.str.extract(r" @ (\w+)$", expand=False)
+    return vs.fillna(at)
+
+
 def collapse_to_games(team_rows: pd.DataFrame, season: str, season_type: str) -> pd.DataFrame:
     """Turn two team rows per game into one row with home and away columns."""
     rows = team_rows.copy()
     rows["GAME_ID"] = rows["GAME_ID"].astype(str)
-    rows["is_home"] = rows["MATCHUP"].str.contains(" vs. ", regex=False)
+    rows["is_home"] = rows["TEAM_ABBREVIATION"] == home_abbr(rows["MATCHUP"])
 
     home = rows[rows["is_home"]].set_index("GAME_ID")
     away = rows[~rows["is_home"]].set_index("GAME_ID")

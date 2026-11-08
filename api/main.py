@@ -2,6 +2,7 @@
 
 GET  /health                         status, data source, model, live feed health
 GET  /meta                           seasons and teams for the search filters
+GET  /model                          how the serving model was trained and how it scored on the test season
 GET  /games/today                    tonight's games with status, score, probability
 GET  /games?team=TOR&season=2025-26  past games for replay (also q, date, sort, paging)
 GET  /games/{id}                     one game's summary
@@ -24,6 +25,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from api import settings
 from api.live import LiveHub, make_source
+from api.modelcard import build_card
 from api.replay import stream_replay, valid_speed
 from api.store import GameStore
 
@@ -48,6 +50,7 @@ async def lifespan(app: FastAPI):
     model = _load_model()
     app.state.store = store
     app.state.model = model
+    app.state.card = build_card(settings.ARTIFACTS_DIR, settings.REPORTS_DIR)
     app.state.hub = LiveHub(make_source(store) if model else None, store, model)
     log.info(
         "ready: %d games (%s data), model=%s, live=%s",
@@ -96,6 +99,13 @@ async def meta():
     return {"seasons": store().seasons(), "teams": store().teams(), "data_source": settings.data_source()}
 
 
+@app.get("/model")
+async def model_card():
+    if app.state.card is None:
+        raise HTTPException(404, "no trained model")
+    return app.state.card
+
+
 @app.get("/games/today")
 async def games_today():
     games = await hub().scoreboard()
@@ -136,14 +146,14 @@ async def series(game_id: str):
 
 
 @app.websocket("/games/{game_id}/replay")
-async def replay(ws: WebSocket, game_id: str, speed: float = 10):
+async def replay(ws: WebSocket, game_id: str, speed: float = 10, start: int = 0):
     await ws.accept()
     data = store().series(game_id)
     if data is None:
         await ws.send_json({"type": "error", "message": "no series for this game"})
         await ws.close(code=4404)
         return
-    await stream_replay(ws, data["game"], data["plays"], valid_speed(speed) or 10)
+    await stream_replay(ws, data["game"], data["plays"], valid_speed(speed) or 10, start=start)
 
 
 @app.websocket("/games/{game_id}/live")

@@ -77,6 +77,26 @@ def test_replay_stream_controls(client):
             msg = ws.receive_json()
 
 
+def test_replay_seek(client):
+    """Seeking (the game page's slider and quarter buttons) resumes from the chosen play."""
+    with client.websocket_connect("/games/T0001/replay?speed=600&start=40") as ws:
+        assert ws.receive_json()["type"] == "init"
+        jump = ws.receive_json()
+        assert jump["type"] == "seek" and jump["i"] == 40 and [p["i"] for p in jump["plays"]] == list(range(40))
+        assert ws.receive_json()["i"] == 40
+        ws.send_json({"cmd": "pause"})
+        ws.send_json({"cmd": "seek", "i": 10})
+        msg = ws.receive_json()
+        while msg["type"] != "seek":
+            msg = ws.receive_json()
+        assert len(msg["plays"]) == 10
+        ws.send_json({"cmd": "play"})
+        msg = ws.receive_json()
+        while msg["type"] != "play":
+            msg = ws.receive_json()
+        assert msg["i"] == 10
+
+
 def test_replay_runs_to_end(client):
     with client.websocket_connect("/games/T0002/replay?speed=600") as ws:
         total = ws.receive_json()["total"]
@@ -184,3 +204,56 @@ def test_live_poll_sends_heartbeat(bundle):
     asyncio.run(hub.poll_once(lg))
     kinds = [q.get_nowait()["type"] for _ in range(q.qsize())]
     assert kinds == ["play", "heartbeat"]
+
+
+def test_model_card_without_report(client):
+    card = client.get("/model").json()
+    assert card["production"] == "logreg"
+    assert card["models"]["logreg"]["test"] is None
+
+
+def test_model_card_pairs_report_with_its_training_run(tmp_path):
+    import json
+
+    from api.modelcard import build_card
+
+    split = {"train": {"seasons": ["2021-22"], "games": 10, "plays": 4000}}
+    meta = {
+        "trained_at": "2026-11-07T04:59:53",
+        "data_source": "nba",
+        "models": ["logreg", "xgboost"],
+        "production": "xgboost",
+        "split": split,
+        "val": {"xgboost": {"brier": 0.18, "log_loss": 0.52}},
+        "train_seconds": {"xgboost": 5.1},
+        "xgboost_trees": 233,
+    }
+    bins = [
+        {"bin": 0, "n": 50, "mean_pred": 0.04, "frac_pos": 0.03, "lo": 0.0, "hi": 0.1, "gap": 0.01},
+        {"bin": 1, "n": None, "mean_pred": None, "frac_pos": None, "lo": 0.1, "hi": 0.2, "gap": None},
+    ]
+    result = {
+        "rows": 4000,
+        "brier": 0.17,
+        "log_loss": 0.5,
+        "ece": 0.012,
+        "bins": bins,
+        "phases": {"first_half": {"rows": 2000, "brier": 0.2}, "overtime": {"rows": 0}},
+    }
+    report = {"trained_at": meta["trained_at"], "production": "xgboost", "split": split, "models": {"xgboost": result}}
+    (tmp_path / "meta.json").write_text(json.dumps(meta))
+    (tmp_path / "metrics.json").write_text(json.dumps(report))
+
+    card = build_card(tmp_path, tmp_path)
+    xgb = card["models"]["xgboost"]
+    assert card["xgboost_trees"] == 233 and xgb["val"]["brier"] == 0.18
+    assert xgb["test"]["brier"] == 0.17
+    assert [b["n"] for b in xgb["test"]["bins"]] == [50]  # empty bins dropped
+    assert list(xgb["test"]["phases"]) == ["first_half"]  # phases with no plays dropped
+    assert card["models"]["logreg"]["test"] is None
+
+    # A report from another training run is left out rather than mislabeled.
+    report["trained_at"] = "2026-10-01T00:00:00"
+    (tmp_path / "metrics.json").write_text(json.dumps(report))
+    assert build_card(tmp_path, tmp_path)["models"]["xgboost"]["test"] is None
+    assert build_card(tmp_path / "missing", tmp_path) is None

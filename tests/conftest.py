@@ -81,6 +81,7 @@ def api_settings(bundle, monkeypatch):
     monkeypatch.setattr(settings, "GAMES_PATH", d / "games.parquet")
     monkeypatch.setattr(settings, "STRENGTH_PATH", d / "team_strength.json")
     monkeypatch.setattr(settings, "ARTIFACTS_DIR", bundle["artifacts"])
+    monkeypatch.setattr(settings, "REPORTS_DIR", bundle["root"] / "reports")  # none: card has no test results
     monkeypatch.setattr(settings, "LIVE_SOURCE", "off")
     return settings
 

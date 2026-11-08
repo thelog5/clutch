@@ -317,7 +317,14 @@ def main() -> None:
     out = config.REPORTS_DIR
     out.mkdir(parents=True, exist_ok=True)
     source = config.data_source()
-    payload = {"data_source": source, "production": meta["production"], "split": meta["split"], "models": results}
+    payload = {
+        "data_source": source,
+        "sample": config.is_sample(),
+        "trained_at": meta.get("trained_at"),  # ties this report to one training run (api/modelcard.py)
+        "production": meta["production"],
+        "split": meta["split"],
+        "models": results,
+    }
     (out / "metrics.json").write_text(json.dumps(payload, indent=2) + "\n")
     plot_calibration(results, out / "calibration.png")
     plot_calibration(results, out / "calibration-dark.png", dark=True)

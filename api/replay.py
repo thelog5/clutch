@@ -6,6 +6,7 @@ Plays on the same clock tick (fouls, free throws) still get a short beat.
 
 Client -> server commands (JSON):
     {"cmd": "pause"} | {"cmd": "play"} | {"cmd": "speed", "speed": 60} | {"cmd": "restart"}
+    {"cmd": "seek", "i": 120}   (jump to play 120; ?start=120 on connect does the same)
 
 Server -> client messages:
     {"type": "init", "mode": "replay", "game": {...}, "total": N, "speed": S}
@@ -13,6 +14,7 @@ Server -> client messages:
      description, prob, delta}
     {"type": "state", "paused": bool, "speed": S}
     {"type": "reset"}            (after restart)
+    {"type": "seek", "i": N, "plays": [...]}   (after a seek: every play before N)
     {"type": "end"}
 """
 
@@ -39,7 +41,7 @@ def valid_speed(raw) -> float | None:
     return v if 0.25 <= v <= 600 else None
 
 
-async def stream_replay(ws: WebSocket, game: dict, plays: list[dict], speed: float) -> None:
+async def stream_replay(ws: WebSocket, game: dict, plays: list[dict], speed: float, start: int = 0) -> None:
     state = {"i": 0, "speed": speed, "paused": False}
     running = asyncio.Event()
     running.set()
@@ -47,6 +49,15 @@ async def stream_replay(ws: WebSocket, game: dict, plays: list[dict], speed: flo
 
     async def send_state():
         await ws.send_json({"type": "state", "paused": state["paused"], "speed": state["speed"]})
+
+    async def seek(raw) -> bool:
+        try:
+            i = min(max(int(raw), 0), len(plays))
+        except (TypeError, ValueError):
+            return False
+        state["i"] = i
+        await ws.send_json({"type": "seek", "i": i, "plays": plays[:i]})
+        return True
 
     async def reader():
         while True:
@@ -63,12 +74,16 @@ async def stream_replay(ws: WebSocket, game: dict, plays: list[dict], speed: flo
             elif cmd == "restart":
                 state["i"] = 0
                 await ws.send_json({"type": "reset"})
+            elif cmd == "seek" and await seek(msg.get("i")):
+                pass
             else:
                 continue
             wake.set()
             await send_state()
 
     await ws.send_json({"type": "init", "mode": "replay", "game": game, "total": len(plays), "speed": speed})
+    if start > 0:
+        await seek(start)
     reader_task = asyncio.create_task(reader())
     try:
         while True:

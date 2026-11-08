@@ -25,12 +25,13 @@ export function useReplay(gameId: string) {
   };
 
   const start = useCallback(
-    (atSpeed: number = speed) => {
+    (atSpeed: number = speed, from = 0) => {
       close();
       setPlays([]);
       setStatus("connecting");
       setSpeedState(atSpeed);
-      const sock = new WebSocket(wsUrl(`/games/${encodeURIComponent(gameId)}/replay?speed=${atSpeed}`));
+      const query = `speed=${atSpeed}${from > 0 ? `&start=${from}` : ""}`;
+      const sock = new WebSocket(wsUrl(`/games/${encodeURIComponent(gameId)}/replay?${query}`));
       ws.current = sock;
       sock.onmessage = (ev) => {
         const msg = JSON.parse(ev.data);
@@ -51,6 +52,9 @@ export function useReplay(gameId: string) {
           case "reset":
             setPlays([]);
             setStatus("playing");
+            break;
+          case "seek":
+            setPlays(msg.plays);
             break;
           case "end":
             setStatus("ended");
@@ -88,6 +92,11 @@ export function useReplay(gameId: string) {
     setSpeed: (s: number) => {
       setSpeedState(s);
       send({ cmd: "speed", speed: s });
+    },
+    /** Jump to play i (the slider and quarter buttons). Starts the replay there if it isn't running. */
+    seek: (i: number) => {
+      if (ws.current?.readyState === WebSocket.OPEN) send({ cmd: "seek", i });
+      else start(speed, i);
     },
   };
 }

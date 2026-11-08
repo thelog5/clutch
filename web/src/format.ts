@@ -54,3 +54,7 @@ export function statusLine(g: GameSummary): string {
   if (g.status === "live") return g.status_text || `${periodLabel(g.period ?? 1)} ${g.clock ?? ""}`;
   return "Final";
 }
+
+/** 1,397,867 -> "1.40M", 46,700 -> "47K", 3,690 -> "3,690". */
+export const compactCount = (n: number) =>
+  n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}K` : n.toLocaleString("en-US");

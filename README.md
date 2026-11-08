@@ -120,9 +120,10 @@ replay series and team strengths. The model isn't retrained. Commit
 | `GET /games?team=TOR&season=2025-26` | Past games for replay (also `q`, `date`, `sort=date\|swing\|close`, paging) |
 | `GET /games/{id}` | One game's summary |
 | `GET /games/{id}/series` | Full probability series for a finished game, plus its biggest swing |
-| `WS /games/{id}/replay?speed=10` | Streams a finished game play by play; accepts `pause`, `play`, `speed`, `restart` |
+| `WS /games/{id}/replay?speed=10` | Streams a finished game play by play; accepts `pause`, `play`, `speed`, `restart`, `seek` (also `?start=N`) |
 | `WS /games/{id}/live` | Pushes each new play's probability during a live game |
 | `GET /health`, `GET /meta` | Status, data source, model; seasons and teams for filters |
+| `GET /model` | How the serving model was trained and how it scored on the test season (feeds "How it's built") |
 
 Every pushed play message carries the play description, clock, score,
 probability and the change from the previous play. Live streams also send a
@@ -137,7 +138,7 @@ and never calls the NBA site; live mode polls every 5 seconds, well inside the
 | `pipeline/` | Data pull, canonical play schema (historical and live feeds share it), features, team strength, synthetic generator |
 | `model/` | Training, evaluation report, `predict(state)` |
 | `api/` | FastAPI app, precompute, replay streaming, live hub |
-| `web/` | Vite + React + Recharts app |
+| `web/` | Vite + React + Recharts app: home, game center, how it's built |
 | `tests/` | Feature, split, model, API, framing tests |
 | `docs/` | [Build log](docs/BUILD_LOG.md), [open questions](docs/QUESTIONS.md), [blockers](docs/BLOCKERS.md), [design notes](docs/DESIGN.md) |
 

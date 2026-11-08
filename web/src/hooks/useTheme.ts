@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
 
 export interface ThemeColors {
-  paper: string;
   surface: string;
   ink: string;
   ink2: string;
   ink3: string;
   line: string;
   lineSoft: string;
-  shade: string;
-  ball: string;
-  up: string;
-  down: string;
+  brand: string;
 }
 
 function read(): { dark: boolean; colors: ThemeColors } {
@@ -20,17 +16,13 @@ function read(): { dark: boolean; colors: ThemeColors } {
   return {
     dark: window.matchMedia("(prefers-color-scheme: dark)").matches,
     colors: {
-      paper: v("--paper"),
       surface: v("--surface"),
       ink: v("--ink"),
       ink2: v("--ink-2"),
       ink3: v("--ink-3"),
       line: v("--line"),
       lineSoft: v("--line-soft"),
-      shade: v("--shade"),
-      ball: v("--ball"),
-      up: v("--up"),
-      down: v("--down"),
+      brand: v("--brand"),
     },
   };
 }

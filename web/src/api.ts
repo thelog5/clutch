@@ -71,6 +71,55 @@ export interface Meta {
   data_source: "nba" | "synthetic";
 }
 
+export interface SplitPart {
+  seasons: string[];
+  games: number;
+  plays: number;
+}
+
+export interface CalibrationBin {
+  lo: number;
+  hi: number;
+  n: number;
+  mean_pred: number;
+  frac_pos: number;
+}
+
+export type Phase = "first_half" | "third_quarter" | "fourth_quarter" | "last_2_minutes" | "overtime";
+
+export interface TestScores {
+  rows: number;
+  brier: number;
+  log_loss: number;
+  ece: number;
+  max_bin_gap: number;
+  calibrated_within_5pts: boolean;
+  bins: CalibrationBin[];
+  phases: Partial<Record<Phase, { rows: number; brier: number; log_loss: number }>>;
+  final_play?: { mean_prob_on_winner: number; "share_above_0.95": number };
+  tipoff?: { corr_with_strength_gap: number; mean_prob: number; home_win_rate: number };
+}
+
+/** GET /model: how the serving model was trained and how it scored on the test season. */
+export interface ModelCard {
+  data_source: "nba" | "synthetic";
+  sample: boolean;
+  trained_at: string | null;
+  production: string;
+  calibrated: boolean;
+  features: string[];
+  split: { train: SplitPart; val: SplitPart; test: SplitPart } | null;
+  xgboost_trees: number | null;
+  models: Record<
+    string,
+    {
+      train_seconds: number | null;
+      val: { brier: number; log_loss: number } | null;
+      test: TestScores | null;
+    }
+  >;
+}
+
 export interface GamesPage {
   total: number;
   games: GameSummary[];
@@ -110,6 +159,7 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
 export const api = {
   health: (s?: AbortSignal) => get<Health>("/health", s),
   meta: (s?: AbortSignal) => get<Meta>("/meta", s),
+  model: (s?: AbortSignal) => get<ModelCard>("/model", s),
   today: (s?: AbortSignal) => get<{ games: GameSummary[]; live_ok: boolean | null }>("/games/today", s),
   games: (params: Record<string, string | number | undefined>, s?: AbortSignal) => {
     const q = new URLSearchParams();

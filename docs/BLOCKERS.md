@@ -44,7 +44,9 @@ what to run or click. Tick them off as you go.
   site, in the same account). After B1:
   ```bash
   make deploy-bundle                 # writes api/data/ (last two seasons + current)
-  git add api/data model/artifacts && git commit -m "data: deploy bundle" && git push
+  # model/artifacts and reports/ hold the trained model and its test-season
+  # numbers; "How it's built" on the site reads both through GET /model.
+  git add api/data model/artifacts reports && git commit -m "data: deploy bundle" && git push
   ```
   1. In Render: **New > Blueprint**, pick this repo. It reads `render.yaml`
      and creates two services, `clutch-api` (free instance) and `clutch-web`

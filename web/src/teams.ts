@@ -1,11 +1,5 @@
-// Team colors for the tug-of-war chart, and the rules for picking a legible pair.
-//
-// Each team has a primary and an alternate color. For a game we want:
-//   1. each color readable on the current surface (contrast >= 2.2:1), and
-//   2. the two teams clearly different (OKLab distance >= 0.12),
-// trying home primary/alt against away primary/alt, then falling back to gray
-// for the away side. Team abbreviations label both edges of the chart, so
-// identity never rests on color alone.
+// Team colors (primary, alternate), used for the small two-tone team badges.
+// Badges always sit next to the team abbreviation, so identity never rests on color alone.
 
 export const TEAM_COLORS: Record<string, [string, string]> = {
   ATL: ["#E03A3E", "#C1D32F"],
@@ -40,58 +34,6 @@ export const TEAM_COLORS: Record<string, [string, string]> = {
   WAS: ["#002B5C", "#E31837"],
 };
 
-const GRAY = { light: "#8C96A8", dark: "#7C879C" };
+const FALLBACK: [string, string] = ["#8C8C88", "#5A5A57"];
 
-function hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-function lin(c: number): number {
-  const s = c / 255;
-  return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-}
-
-function luminance(hex: string): number {
-  const [r, g, b] = hexToRgb(hex).map(lin);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-export function contrast(a: string, b: string): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
-}
-
-function oklab(hex: string): [number, number, number] {
-  const [r, g, b] = hexToRgb(hex).map(lin);
-  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-  return [
-    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
-    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
-    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
-  ];
-}
-
-export function distance(a: string, b: string): number {
-  const [x, y] = [oklab(a), oklab(b)];
-  return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
-}
-
-const MIN_CONTRAST = 2.2;
-const MIN_DISTANCE = 0.12;
-
-export function pickColors(home: string, away: string, surface: string, dark: boolean): { home: string; away: string } {
-  const fallback = dark ? GRAY.dark : GRAY.light;
-  const usable = (abbr: string) =>
-    (TEAM_COLORS[abbr] ?? [fallback, fallback]).filter((c) => contrast(c, surface) >= MIN_CONTRAST);
-  const homeOpts = usable(home).length ? usable(home) : [fallback];
-  const awayOpts = [...usable(away), fallback];
-  for (const h of homeOpts) {
-    for (const a of awayOpts) {
-      if (distance(h, a) >= MIN_DISTANCE) return { home: h, away: a };
-    }
-  }
-  return { home: homeOpts[0], away: fallback };
-}
+export const teamColors = (abbr: string): [string, string] => TEAM_COLORS[abbr] ?? FALLBACK;

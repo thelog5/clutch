@@ -76,6 +76,26 @@ def test_scores_forward_fill_and_margin_x_time():
     assert set(FEATURES) <= set(f.columns)
 
 
+def test_late_logged_play_goes_by_game_clock():
+    # The feed logs an instant-replay review after the period ends: a later
+    # action_number, an earlier clock, and the score at that moment.
+    f = build_features(
+        frame(
+            [
+                play(1, 4, "PT03M30.00S", "h", "Made Shot", "A 2pt", 109, 106),
+                play(2, 4, "", "", "Timeout", "no clock: keeps its place"),
+                play(3, 4, "PT03M08.00S", "v", "Made Shot", "B 2pt", 109, 108),
+                play(4, 4, "PT00M01.20S", "h", "Made Shot", "A 3pt", 119, 116),
+                play(5, 4, "PT00M00.00S", "", "period", "End of 4th Period", 119, 116),
+                play(6, 4, "PT03M08.00S", "", "Instant Replay", "Instant Replay", 109, 108),
+            ]
+        ),
+        {"G1": 0.0},
+    )
+    assert f["action_number"].tolist() == [1, 2, 3, 6, 4, 5]
+    assert (f.iloc[-1]["home_score"], f.iloc[-1]["away_score"]) == (119, 116)
+
+
 def test_possession_heuristic():
     rows = [
         play(1, 1, "PT12M00.00S", "", "period", "Period Start"),

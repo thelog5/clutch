@@ -49,4 +49,4 @@ HIDDEN_ACTION_TYPES = {"Substitution", "period", "game", ""}
 
 
 def data_source() -> str:
-    return "synthetic" if (API_DATA_DIR / "SYNTHETIC").exists() else "nba"
+    return "synthetic" if (API_DATA_DIR / "SYNTHETIC").is_file() else "nba"

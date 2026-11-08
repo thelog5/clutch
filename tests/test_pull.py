@@ -24,3 +24,15 @@ def test_sample_is_stable_and_capped():
     games = season_games()
     assert sample_per_season(games, 7).equals(sample_per_season(games.sample(frac=1, random_state=1), 7))
     assert len(sample_per_season(games, 500)) == 200  # never more games than the season has
+
+
+def test_synthetic_folder_is_not_the_marker(tmp_path, monkeypatch):
+    # macOS paths are case-insensitive: data/SYNTHETIC also finds the data/synthetic/ folder.
+    from pipeline import config
+
+    (tmp_path / "synthetic").mkdir()
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    assert config.data_source() == "nba"
+    (tmp_path / "synthetic" / "SYNTHETIC").write_text("generated\n")
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path / "synthetic")
+    assert config.data_source() == "synthetic"

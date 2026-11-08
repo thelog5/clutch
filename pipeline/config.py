@@ -62,8 +62,10 @@ OT_SECONDS = 5 * 60
 
 def data_source() -> str:
     """'synthetic' when running on the generated dev dataset, else 'nba'."""
+    # is_file, not exists: on macOS paths are case-insensitive, so data/SYNTHETIC
+    # also finds the data/synthetic/ folder and real data would read as synthetic.
     marker = DATA_DIR / "SYNTHETIC"
-    return "synthetic" if marker.exists() else "nba"
+    return "synthetic" if marker.is_file() else "nba"
 
 
 # Written by `make pull-sample` (a few games per season, for a quick test run);
@@ -72,4 +74,4 @@ SAMPLE_MARKER = DATA_DIR / "SAMPLE"
 
 
 def is_sample() -> bool:
-    return SAMPLE_MARKER.exists()
+    return SAMPLE_MARKER.is_file()

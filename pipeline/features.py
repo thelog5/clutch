@@ -100,13 +100,29 @@ def build_features(plays: pd.DataFrame, strength_gap: pd.Series | dict) -> pd.Da
         drop=True
     )
     df["period"] = df["period"].astype(int)
+    df["clock_secs"] = df["clock"].map(clock_to_seconds).astype(float)
+
+    # Game-clock order. The feed sometimes logs an entry after the fact (an
+    # instant-replay review recorded once the period is over) with a later
+    # action_number but an earlier clock and that moment's score; in
+    # action_number order it would become the game's "last play". Rows with no
+    # clock keep their place; ties stay in action_number order.
+    has_clock = df["clock"].fillna("").astype(str).str.strip().ne("")
+    sort_clock = df["clock_secs"].where(has_clock).groupby([df["game_id"], df["period"]]).ffill().fillna(np.inf)
+    order = (
+        df.assign(_clock=sort_clock)
+        .sort_values(
+            ["game_id", "period", "_clock", "action_number"], ascending=[True, True, False, True], kind="stable"
+        )
+        .index
+    )
+    df = df.loc[order].reset_index(drop=True)
 
     by_game = df.groupby("game_id", sort=False)
     df["home_score"] = by_game["score_home"].ffill().fillna(0).astype(int)
     df["away_score"] = by_game["score_away"].ffill().fillna(0).astype(int)
     df["margin"] = df["home_score"] - df["away_score"]
 
-    df["clock_secs"] = df["clock"].map(clock_to_seconds).astype(float)
     df["seconds_left"] = seconds_left(df["period"], df["clock_secs"])
     df["game_elapsed"] = game_elapsed(df["period"], df["clock_secs"])
     df["is_ot"] = (df["period"] > config.REGULATION_PERIODS).astype(int)

@@ -1,0 +1,153 @@
+diff --git a/README.md b/README.md
+index 9d36bf5..aff416d 100644
+--- a/README.md
++++ b/README.md
+@@ -36,6 +36,7 @@ flowchart LR
+ | `home_possession` | 1 if home has the ball, inferred from the last made shot, final made free throw, rebound or turnover (0.5 when unknown) |
+ | `strength_gap` | Home minus away season-to-date point differential per game, using only earlier games; blended toward last season's for each team's first 10 games |
+ | `margin_x_time` | `margin / sqrt(seconds_left + 1)`, helps the linear baseline |
++| `possession_x_time` | `(2 * home_possession - 1) / sqrt(seconds_left + 1)`: who has the ball, worth more as time runs out |
+ 
+ Label: 1 if the home team won.
+ 
+@@ -56,10 +57,10 @@ Test season **2025-26**: 1,229 games, 621,370 plays. Trained on 2021-22, 2022-23
+ 
+ | Metric | Logistic regression | XGBoost | MLP |
+ | --- | --- | --- | --- |
+-| Brier score | 0.1452 | 0.1454 | 0.1452 |
+-| Log loss | 0.4375 | 0.4371 | 0.4371 |
+-| Expected calibration error | 0.0099 | 0.0107 | 0.0126 |
+-| Brier score, last 2 minutes only | 0.0471 | 0.0459 | 0.0475 |
++| Brier score | 0.1452 | 0.1454 | 0.1451 |
++| Log loss | 0.4372 | 0.4370 | 0.4362 |
++| Expected calibration error | 0.0101 | 0.0116 | 0.0123 |
++| Brier score, last 2 minutes only | 0.0463 | 0.0458 | 0.0456 |
+ 
+ - [x] XGBoost or the MLP beats the logistic regression baseline on test Brier (MLP)
+ - [x] Production model (Logistic regression) has every calibration bin within 5 points of the diagonal (bins with ≥200 plays)
+diff --git a/model/predict.py b/model/predict.py
+index a6b3aa1..2bbb413 100644
+--- a/model/predict.py
++++ b/model/predict.py
+@@ -4,7 +4,7 @@ The API imports ``predict`` (one state) and ``predict_frame`` (many rows).
+ Nothing here imports torch: the MLP runs from exported numpy weights.
+ 
+ A *state* is a dict with the feature names from ``pipeline.features.FEATURES``.
+-``margin_x_time`` is filled in if it's missing, so callers can pass just::
++``margin_x_time`` and ``possession_x_time`` are filled in if missing, so callers can pass just::
+ 
+     predict({"margin": 8, "seconds_left": 120, "is_ot": 0,
+              "home_possession": 1, "strength_gap": 2.5})
+@@ -89,6 +89,9 @@ def state_vector(state: dict) -> list[float]:
+     s.setdefault("is_ot", 0)
+     s.setdefault("home_possession", 0.5)
+     s.setdefault("strength_gap", 0.0)
++    if "possession_x_time" not in s:
++        t = s["seconds_left"]
++        s["possession_x_time"] = (2 * s["home_possession"] - 1) / math.sqrt(t + 1.0) if t > 0 else 0.0
+     return [float(s[f]) for f in FEATURES]
+ 
+ 
+diff --git a/model/train.py b/model/train.py
+index 5015b11..bc06f38 100644
+--- a/model/train.py
++++ b/model/train.py
+@@ -2,7 +2,7 @@
+ 
+ * logistic regression (baseline): standardized features, L2
+ * XGBoost: hist trees, early stopping on the validation season, monotone in
+-  margin / possession / strength_gap / margin_x_time
++  margin / possession / strength_gap / margin_x_time / possession_x_time
+ * PyTorch MLP: 2 hidden layers of 32 (``model/mlp.py``)
+ 
+ Train on 2021-22 to 2023-24, early-stop and pick the production model on
+@@ -44,6 +44,7 @@ MONOTONE = {
+     "home_possession": 1,
+     "strength_gap": 1,
+     "margin_x_time": 1,
++    "possession_x_time": 1,
+ }
+ 
+ 
+diff --git a/pipeline/features.py b/pipeline/features.py
+index 34e61c0..7dd15a6 100644
+--- a/pipeline/features.py
++++ b/pipeline/features.py
+@@ -14,6 +14,10 @@ home_possession    1 if home has the ball, inferred from the last event
+ strength_gap       home minus away season-to-date point differential per
+                    game, using only games before this one
+ margin_x_time      margin / sqrt(seconds_left + 1)
++possession_x_time  (2 * home_possession - 1) / sqrt(seconds_left + 1): +1 for
++                   the home ball, -1 away, 0 unknown, scaled up as time runs
++                   out (the ball is worth about a point, which matters most
++                   when few possessions are left); 0 at 0:00
+ =================  ==========================================================
+ 
+ Label: ``home_win`` = 1 if the home team won.
+@@ -43,6 +47,7 @@ FEATURES = [
+     "home_possession",
+     "strength_gap",
+     "margin_x_time",
++    "possession_x_time",
+ ]
+ 
+ _FT_RE = r"(\d)\s+OF\s+(\d)"
+@@ -135,6 +140,10 @@ def build_features(plays: pd.DataFrame, strength_gap: pd.Series | dict) -> pd.Da
+     gaps = pd.Series(strength_gap) if isinstance(strength_gap, dict) else strength_gap
+     df["strength_gap"] = df["game_id"].map(gaps).astype(float).fillna(0.0)
+     df["margin_x_time"] = df["margin"] / np.sqrt(df["seconds_left"] + 1.0)
++    # The ball is worth nothing once the clock reads 0:00.
++    df["possession_x_time"] = np.where(
++        df["seconds_left"] > 0, (2 * df["home_possession"] - 1) / np.sqrt(df["seconds_left"] + 1.0), 0.0
++    )
+     return df
+ 
+ 
+diff --git a/tests/test_features.py b/tests/test_features.py
+index f2b45ac..2a8f531 100644
+--- a/tests/test_features.py
++++ b/tests/test_features.py
+@@ -73,6 +73,8 @@ def test_scores_forward_fill_and_margin_x_time():
+     assert f["strength_gap"].eq(1.5).all()
+     row = f.iloc[1]
+     assert row["margin_x_time"] == pytest.approx(2 / math.sqrt(row["seconds_left"] + 1))
++    # Away ball after the home basket: -1, scaled by time left
++    assert row["possession_x_time"] == pytest.approx(-1 / math.sqrt(row["seconds_left"] + 1))
+     assert set(FEATURES) <= set(f.columns)
+ 
+ 
+diff --git a/tests/test_predict.py b/tests/test_predict.py
+index dfc79c9..2ecbce4 100644
+--- a/tests/test_predict.py
++++ b/tests/test_predict.py
+@@ -19,6 +19,9 @@ def test_state_vector_fills_margin_x_time():
+     assert len(v) == len(FEATURES)
+     assert v[FEATURES.index("margin_x_time")] == pytest.approx(0.8)
+     assert v[FEATURES.index("home_possession")] == 0.5
++    assert v[FEATURES.index("possession_x_time")] == 0.0  # unknown possession counts for neither side
++    v = state_vector({"margin": -2, "seconds_left": 15, "home_possession": 0})
++    assert v[FEATURES.index("possession_x_time")] == pytest.approx(-0.25)
+ 
+ 
+ @pytest.mark.parametrize("name", MODEL_NAMES)
+diff --git a/web/src/pages/HowPage.tsx b/web/src/pages/HowPage.tsx
+index 28a57a2..9ce4989 100644
+--- a/web/src/pages/HowPage.tsx
++++ b/web/src/pages/HowPage.tsx
+@@ -31,6 +31,7 @@ const INPUTS = [
+   ["Possession", "Who has the ball, from the last make, rebound or turnover."],
+   ["Team strength", "Gap in each team's point differential so far this season."],
+   ["Margin × time", "The lead scaled by time left: 8 points means more late."],
++  ["Possession × time", "Who has the ball, scaled by time left: the ball is worth more in the final seconds."],
+ ];
+ 
+ const fmt = (n: number) => n.toLocaleString("en-US");
+@@ -176,7 +177,7 @@ export function HowPage() {
+         </Step>
+ 
+         <Step n="02" title="Three models learn from it">
+-          <p>All three see the same rows and the same six inputs.</p>
++          <p>All three see the same rows and the same seven inputs.</p>
+           <ul className="model-list">
+             {Object.entries(card?.models ?? { logreg: null, xgboost: null, mlp: null }).map(([name, m]) => (
+               <li key={name}>

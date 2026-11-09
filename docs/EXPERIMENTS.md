@@ -37,3 +37,57 @@ that the ball matters less than it does, and no reshaping of the input fixes
 that. **Next:** measure the guess against the NBA's own `possession` field
 from the live-format feed (`scripts/check_possession.py`). If it's often
 wrong, train on the real possession instead, and retry this input on top.
+
+## E2. How good is the possession guess? (check, no model change)
+
+**2026-11-09.** `scripts/check_possession.py` compared the guess with the
+NBA's own `possession` field from the live-format feed, for 25 games (5 per
+season). The two feeds' action numbers line up (home score agrees on 99.9% of
+plays). The NBA's field names the team with the ball *during* a play, so the
+guess (who has it *after*) is compared with the NBA's value on the next play:
+
+| | Plays | Guess matches the NBA |
+| --- | --- | --- |
+| All plays | 12,048 | 83.1% |
+| Last 2 minutes | 660 | 87.9% |
+| Last 30 s | 200 | 90.0% |
+| Last 30 s, within 3 points | 90 | 94.4% |
+
+Right about 9 times in 10 late in games: not wrong enough to explain the
+late-game gap, so a second download for the NBA's possession field isn't
+worth it for this problem.
+
+## E3. XGBoost was memorizing training games (kept)
+
+**2026-11-09.** XGBoost stopped improving after about 50 trees and scored
+worse than the baseline on validation (0.1520 vs 0.1505), which a more
+flexible model shouldn't. Cause: `strength_gap` is the same for every play in
+a game and nearly unique to it, and a leaf only needed 100 units of weight
+(about one game's plays), so trees could single out individual training games
+and learn how they ended.
+
+Fixes, each tried alone and then together on the validation season:
+
+| XGBoost, validation Brier | Overall | Last 2 min | Last 30 s | Last 30 s, within 3 pts |
+| --- | --- | --- | --- | --- |
+| Before | 0.15203 | 0.04572 | 0.05058 | 0.12568 |
+| Leaves need 1,000 | 0.15152 | 0.04542 | 0.05034 | 0.12507 |
+| Strength rounded to whole points | 0.15152 | 0.04559 | 0.05036 | 0.12509 |
+| Strength combines only with time | 0.15184 | 0.04583 | 0.05083 | 0.12621 |
+| **All three (kept)** | **0.15089** | **0.04518** | **0.05013** | **0.12450** |
+| Logistic regression, for reference | 0.15051 | 0.04620 | 0.05110 | 0.12710 |
+
+Also tried, not kept: rounding strength to 2 points (worse); smaller leaves
+(300, 100, 30) once the other two fixes were in (worse); boosting from the
+baseline's predictions (0.15038 overall, the only version ahead of the
+baseline on validation, but it kept almost none of the late-game gain).
+
+**Result on the test season (2025-26):** XGBoost Brier 0.14426 vs the
+baseline's 0.14524, log loss 0.4341 vs 0.4375, worst calibration bin 1.9
+points, last 2 minutes 0.0459 vs 0.0471. The site still uses the baseline,
+because the production pick is the best *overall* validation Brier.
+
+**Still open:** specific final-possession spots remain too low (down 2 with
+the ball, 10 s left: real 18%, models 5-10%; tied with the ball, 5 s left:
+real 67%, XGBoost 59%). Few training plays sit in those exact spots, and none
+of these changes gave the models enough to learn them.

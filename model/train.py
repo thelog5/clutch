@@ -2,7 +2,10 @@
 
 * logistic regression (baseline): standardized features, L2
 * XGBoost: hist trees, early stopping on the validation season, monotone in
-  margin / possession / strength_gap / margin_x_time
+  margin / possession / strength_gap / margin_x_time. Built so it can't
+  memorize individual training games (docs/EXPERIMENTS.md, E3): strength
+  rounded to whole points, strength combines only with time, and every leaf
+  needs about two games' worth of plays
 * PyTorch MLP: 2 hidden layers of 32 (``model/mlp.py``)
 
 Train on 2021-22 to 2023-24, early-stop and pick the production model on
@@ -30,7 +33,7 @@ from sklearn.preprocessing import StandardScaler
 
 from model import mlp
 from model.data import load_features, split_by_season, xy
-from model.predict import WinProbModel
+from model.predict import XGB_STRENGTH_STEP, WinProbModel, xgb_inputs
 from pipeline import config
 from pipeline.features import FEATURES
 
@@ -53,11 +56,19 @@ def train_logreg(x, y):
     return clf
 
 
+# strength_gap may only combine with time (how much the gap still matters);
+# the game-state inputs combine freely among themselves.
+XGB_INTERACTIONS = [
+    ["margin", "seconds_left", "is_ot", "home_possession", "margin_x_time"],
+    ["strength_gap", "seconds_left", "is_ot"],
+]
+
+
 def train_xgboost(x, y, xv, yv):
     import xgboost as xgb
 
-    dtrain = xgb.DMatrix(x, label=y, feature_names=FEATURES)
-    dval = xgb.DMatrix(xv, label=yv, feature_names=FEATURES)
+    dtrain = xgb.DMatrix(xgb_inputs(x), label=y, feature_names=FEATURES)
+    dval = xgb.DMatrix(xgb_inputs(xv), label=yv, feature_names=FEATURES)
     params = {
         "objective": "binary:logistic",
         "eval_metric": "logloss",
@@ -65,9 +76,10 @@ def train_xgboost(x, y, xv, yv):
         "max_depth": 6,
         "eta": 0.05,
         "subsample": 0.8,
-        "min_child_weight": 100,
+        "min_child_weight": 1000,
         "lambda": 1.0,
         "monotone_constraints": "(" + ",".join(str(MONOTONE[f]) for f in FEATURES) + ")",
+        "interaction_constraints": json.dumps([[FEATURES.index(f) for f in group] for group in XGB_INTERACTIONS]),
         "seed": 0,
     }
     booster = xgb.train(
@@ -181,8 +193,11 @@ def main() -> None:
         "features": FEATURES,
         "models": names,
         "production": production,
+        "sample": config.is_sample(),
         "split": summary,
         "val": val_scores,
+        "xgboost_trees": booster.num_boosted_rounds(),
+        "xgboost_strength_step": XGB_STRENGTH_STEP,
         "calibrated": bool(args.calibrate),
         "train_seconds": timings,
     }

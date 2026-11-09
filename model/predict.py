@@ -26,6 +26,20 @@ from pipeline.features import FEATURES
 
 MODEL_NAMES = ("logreg", "xgboost", "mlp")
 
+# XGBoost sees team strength rounded to whole points. strength_gap is the same
+# for every play in a game and nearly unique to it, so at full precision the
+# trees can single out individual training games and memorize how they ended
+# (docs/EXPERIMENTS.md, E3).
+XGB_STRENGTH_STEP = 1.0
+
+
+def xgb_inputs(x: np.ndarray) -> np.ndarray:
+    """Feature matrix as XGBoost sees it, in training and serving alike."""
+    x = np.array(x, dtype=np.float32, copy=True)
+    i = FEATURES.index("strength_gap")
+    x[:, i] = np.round(x[:, i] / XGB_STRENGTH_STEP) * XGB_STRENGTH_STEP
+    return x
+
 
 class WinProbModel:
     def __init__(self, name: str, artifacts_dir: Path):
@@ -60,7 +74,7 @@ class WinProbModel:
         elif self.name == "xgboost":
             import xgboost as xgb
 
-            p = self._booster.predict(xgb.DMatrix(x, feature_names=FEATURES))
+            p = self._booster.predict(xgb.DMatrix(xgb_inputs(x), feature_names=FEATURES))
         else:
             p = forward_numpy(self._params, x)
         return np.clip(self.calibrate(p.astype(np.float64)), 1e-6, 1 - 1e-6)

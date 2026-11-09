@@ -6,14 +6,14 @@ Test season **2025-26**: 1,229 games, 621,370 plays. Trained on 2021-22, 2022-23
 
 | Metric | Logistic regression | XGBoost | MLP |
 | --- | --- | --- | --- |
-| Brier score | 0.1452 | 0.1454 | 0.1452 |
-| Log loss | 0.4375 | 0.4371 | 0.4371 |
-| Expected calibration error | 0.0099 | 0.0107 | 0.0126 |
+| Brier score | 0.1452 | 0.1443 | 0.1452 |
+| Log loss | 0.4375 | 0.4340 | 0.4371 |
+| Expected calibration error | 0.0099 | 0.0095 | 0.0126 |
 | Brier score, last 2 minutes only | 0.0471 | 0.0459 | 0.0475 |
 
 ## Acceptance checks
 
-- [x] XGBoost or the MLP beats the logistic regression baseline on test Brier (MLP)
+- [x] XGBoost or the MLP beats the logistic regression baseline on test Brier (XGBoost, MLP)
 - [x] Production model (Logistic regression) has every calibration bin within 5 points of the diagonal (bins with ≥200 plays)
 
 ## Calibration
@@ -24,17 +24,17 @@ Test season **2025-26**: 1,229 games, 621,370 plays. Trained on 2021-22, 2022-23
 
 | Metric | Logistic regression | XGBoost | MLP |
 | --- | --- | --- | --- |
-| First half | 0.1849 | 0.1852 | 0.1838 |
-| Third quarter | 0.1334 | 0.1340 | 0.1345 |
+| First half | 0.1849 | 0.1834 | 0.1838 |
+| Third quarter | 0.1334 | 0.1330 | 0.1345 |
 | Fourth quarter | 0.0786 | 0.0781 | 0.0794 |
 | Last 2 minutes | 0.0471 | 0.0459 | 0.0475 |
-| Overtime | 0.1410 | 0.1399 | 0.1545 |
+| Overtime | 0.1410 | 0.1403 | 0.1545 |
 
 ## Sanity checks
 
 | Metric | Logistic regression | XGBoost | MLP |
 | --- | --- | --- | --- |
-| Final play: mean probability on the winner | 1.000 | 0.993 | 0.998 |
-| Final play: share above 0.95 | 1.000 | 0.999 | 0.992 |
-| Tipoff: correlation with strength_gap | 0.997 | 0.975 | 0.981 |
-| Worst calibration bin (points) | 1.6 | 2.8 | 3.3 |
+| Final play: mean probability on the winner | 1.000 | 0.994 | 0.998 |
+| Final play: share above 0.95 | 1.000 | 1.000 | 0.992 |
+| Tipoff: correlation with strength_gap | 0.997 | 0.979 | 0.981 |
+| Worst calibration bin (points) | 1.6 | 1.9 | 3.3 |

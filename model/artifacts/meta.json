@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-11-08T02:32:52",
+  "trained_at": "2026-11-09T01:40:32",
   "data_source": "nba",
   "features": [
     "margin",
@@ -47,19 +47,20 @@
       "log_loss": 0.4500842520403977
     },
     "xgboost": {
-      "brier": 0.15203209134399895,
-      "log_loss": 0.45442364978074307
+      "brier": 0.15088548260571372,
+      "log_loss": 0.4515990277842157
     },
     "mlp": {
       "brier": 0.15068974240707725,
       "log_loss": 0.4505921958511283
     }
   },
-  "xgboost_trees": 101,
+  "xgboost_trees": 174,
+  "xgboost_strength_step": 1.0,
   "calibrated": false,
   "train_seconds": {
-    "logreg": 0.5245540142059326,
-    "xgboost": 4.19873309135437,
-    "mlp": 9.611886024475098
+    "logreg": 0.9215648174285889,
+    "xgboost": 6.073680877685547,
+    "mlp": 9.012349128723145
   }
 }

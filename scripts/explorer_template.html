@@ -1,0 +1,554 @@
+<title>Clutch Model Explorer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap">
+<style>
+/* Layout: one left-aligned column; a sticky row of controls drives every chart below it. */
+:root {
+  --paper: #f4f4f2;
+  --surface: #ffffff;
+  --ink: #111111;
+  --ink-2: #474744;
+  --ink-3: #6e6e6a;
+  --line: #e2e2de;
+  --line-soft: #eeeeea;
+  --brand: #d2450e;
+  --focus: #2563eb;
+  /* models (categorical slots 1-3, validated all-pairs) */
+  --m-logreg: #2a78d6;
+  --m-xgboost: #eb6834;
+  --m-mlp: #1baf7a;
+  /* win chance: away pole, even, home pole */
+  --away: #256abf;
+  --even: #f0efec;
+  --home: #c43c3c;
+  /* model error: too low, right, too high */
+  --low: #c98500;
+  --right: #f0efec;
+  --high: #6250d6;
+  --empty: #f7f7f5;
+  --font: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0d0d0e; --surface: #171719; --ink: #f3f3f1; --ink-2: #c2c2bc; --ink-3: #93938d;
+    --line: #2b2b2e; --line-soft: #222225; --brand: #ff8a57; --focus: #60a5fa;
+    --m-logreg: #3987e5; --m-xgboost: #d95926; --m-mlp: #199e70;
+    --away: #3987e5; --even: #383835; --home: #e66767;
+    --low: #eda100; --right: #383835; --high: #9085e9; --empty: #1c1c1e;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0d0d0e; --surface: #171719; --ink: #f3f3f1; --ink-2: #c2c2bc; --ink-3: #93938d;
+  --line: #2b2b2e; --line-soft: #222225; --brand: #ff8a57; --focus: #60a5fa;
+  --m-logreg: #3987e5; --m-xgboost: #d95926; --m-mlp: #199e70;
+  --away: #3987e5; --even: #383835; --home: #e66767;
+  --low: #eda100; --right: #383835; --high: #9085e9; --empty: #1c1c1e;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.55 var(--font);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2, h3 { font-stretch: 75%; font-weight: 800; letter-spacing: -0.01em; line-height: 1.05; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); }
+h2 { font-size: clamp(1.5rem, 3.4vw, 2rem); }
+h3 { font-size: 1.15rem; font-stretch: 87.5%; }
+p { margin: 0; max-width: 68ch; }
+.muted { color: var(--ink-3); }
+.small { font-size: 13px; }
+.num { font-variant-numeric: tabular-nums; }
+section { display: grid; gap: 14px; min-width: 0; }
+header { display: grid; gap: 14px; }
+.lede { font-size: 17px; color: var(--ink-2); }
+
+table.scores { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+.table-wrap { overflow-x: auto; }
+table.scores th, table.scores td { padding: 6px 14px 6px 0; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.scores th:first-child, table.scores td:first-child { text-align: left; }
+table.scores thead th { color: var(--ink-3); font-weight: 500; font-size: 12.5px; }
+.chip { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: 0; }
+.tag { font-size: 11.5px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+
+.controls {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper);
+  display: flex; flex-wrap: wrap; gap: 10px 22px; padding-block: 10px; border-bottom: 1px solid var(--line);
+}
+.control { display: grid; gap: 4px; }
+.control > span { font-size: 12px; color: var(--ink-3); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.seg button {
+  font: 500 13.5px var(--font); color: var(--ink-2); background: none; border: 0; padding: 6px 11px; cursor: pointer;
+  border-right: 1px solid var(--line); font-variant-numeric: tabular-nums;
+}
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.ask { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 24px; align-items: start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+.sliders { display: grid; gap: 16px; }
+.slider { display: grid; gap: 6px; }
+.slider label { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--ink-3); }
+.slider output { color: var(--ink); font-weight: 600; font-size: 15px; }
+input[type="range"] { width: 100%; accent-color: var(--ink); }
+.answers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.answer { display: grid; gap: 2px; align-content: start; }
+.answer .big { font-size: clamp(1.8rem, 4.5vw, 2.6rem); font-weight: 700; font-stretch: 80%; line-height: 1; font-variant-numeric: tabular-nums; }
+.answer .who { font-size: 12.5px; color: var(--ink-2); }
+.answer.real { border-left: 1px solid var(--line); padding-left: 12px; }
+.answer .note { font-size: 12px; color: var(--ink-3); }
+.verdict { grid-column: 1 / -1; font-size: 14px; color: var(--ink-2); border-top: 1px solid var(--line-soft); padding-top: 12px; }
+
+.figure { display: grid; gap: 10px; min-width: 0; }
+.scroll { overflow-x: auto; }
+svg { display: block; }
+svg text { fill: var(--ink-3); font: 11px var(--font); font-variant-numeric: tabular-nums; }
+svg .axis-title { fill: var(--ink-2); font-size: 12px; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; font-size: 12.5px; color: var(--ink-2); }
+.ramp { width: 180px; height: 10px; border-radius: 3px; }
+.legend .ends { display: flex; align-items: center; gap: 8px; }
+
+.leans { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px; }
+.bars { display: grid; gap: 7px; }
+.bar { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) 4rem; gap: 10px; align-items: center; font-size: 13px; }
+.bar .track { height: 10px; position: relative; }
+.bar .fill { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+.bar .axis { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--line); }
+.bar code, .reasons code, .ideas code { font-size: 12.5px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: var(--line-soft); padding: 1px 5px; border-radius: 4px; }
+
+.reasons, .ideas { display: grid; gap: 14px; padding: 0; margin: 0; list-style: none; max-width: 76ch; }
+.reasons li, .ideas li { display: grid; gap: 3px; }
+.reasons strong, .ideas strong { font-weight: 650; }
+
+#tip {
+  position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: var(--paper); font-size: 12.5px;
+  padding: 7px 9px; border-radius: 6px; max-width: 260px; line-height: 1.4;
+}
+@media (max-width: 760px) {
+  .ask { grid-template-columns: 1fr; }
+  .answers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .answer.real { border-left: 0; padding-left: 0; }
+}
+@media (prefers-reduced-motion: no-preference) { .seg button { transition: background .12s, color .12s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Clutch model explorer</h1>
+    <p class="lede">Every number on this page comes from the trained models, checked against
+      <strong id="realGames" class="num"></strong> real games from <span id="realSeasons"></span>,
+      seasons the models never trained on.</p>
+    <p class="muted small" id="trainedNote"></p>
+    <div class="table-wrap"><table class="scores" id="scores"></table></div>
+  </header>
+
+  <div class="controls" role="group" aria-label="Chart settings">
+    <div class="control"><span>Model on the maps</span><div class="seg" id="ctlModel"></div></div>
+    <div class="control"><span>Who has the ball</span><div class="seg" id="ctlPoss"></div></div>
+    <div class="control"><span>Home team better by (points per game)</span><div class="seg" id="ctlStrength"></div></div>
+  </div>
+
+  <section>
+    <h2>Ask the models</h2>
+    <p class="muted">Pick a moment. Click any square on the maps below to jump to it.</p>
+    <div class="ask">
+      <div class="sliders">
+        <div class="slider">
+          <label for="inMargin"><span>Score</span><output id="outMargin"></output></label>
+          <input type="range" id="inMargin" min="-15" max="15" step="1">
+        </div>
+        <div class="slider">
+          <label for="inTime"><span>Time left in the game</span><output id="outTime"></output></label>
+          <input type="range" id="inTime" min="0" step="1">
+        </div>
+        <p class="muted small" id="askState"></p>
+      </div>
+      <div class="answers" id="answers"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Chance the home team wins</h2>
+    <p class="muted">Every score from home down 15 to home up 15, at 21 moments of the game. The time axis
+      stretches the final minutes so they get as much room as the first half.</p>
+    <div class="figure">
+      <div class="legend" id="legendProb"></div>
+      <div class="scroll"><svg id="heatProb" role="img"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Where the model is wrong</h2>
+    <p class="muted">The model's average prediction minus how often the home team really won, in percentage
+      points, for each score and moment in the real games. Squares with a dot had fewer than <span id="minGames"></span>
+      games, too few to judge. This map uses real games of every team strength, so the strength setting doesn't change it.</p>
+    <div class="figure">
+      <div class="legend" id="legendErr"></div>
+      <div class="scroll"><svg id="heatErr" role="img"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>One score, the whole game</h2>
+    <p class="muted" id="lineCaption"></p>
+    <div class="figure">
+      <div class="legend" id="legendLine"></div>
+      <div class="scroll"><svg id="lines" role="img"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What the models lean on</h2>
+    <div class="leans">
+      <div class="bars" id="leanLogreg"></div>
+      <div class="bars" id="leanXgb"></div>
+    </div>
+    <p id="leanNote"></p>
+  </section>
+
+  <section>
+    <h2>Why the last seconds are hard</h2>
+    <ul class="reasons" id="reasons"></ul>
+  </section>
+
+  <section>
+    <h2>Ideas to try</h2>
+    <ul class="ideas">
+      <li><strong>A separate end-of-game model.</strong>
+        <span>Train one more model only on the last 3 minutes and blend it in as the clock runs down, so the end
+        gets a model of its own instead of a sliver of one built for the whole game. Training code:
+        <code>model/train.py</code>.</span></li>
+      <li><strong>Make close finishes count for more in training.</strong>
+        <span>Give late, close plays a bigger weight (scikit-learn's <code>sample_weight</code>, XGBoost's
+        <code>weight</code> on the <code>DMatrix</code>). Watch the calibration chart: weighting can make the model
+        overconfident early.</span></li>
+      <li><strong>One row per possession, not per play.</strong>
+        <span>Substitutions and timeouts add rows where nothing changes. Dropping them makes each real moment
+        count once. Built in <code>pipeline/features.py</code>.</span></li>
+      <li><strong>Give the models what decides the end.</strong>
+        <span>Timeouts left and the foul bonus can be counted from the play-by-play; the NBA's own possession
+        field is in the live feed (<code>scripts/check_possession.py</code> already reads it).</span></li>
+      <li><strong>Check every change here.</strong>
+        <span>Run <code>make train</code> and then <code>make explore</code>, and compare this page before and
+        after. Decide on the validation season (2024-25); <code>docs/EXPERIMENTS.md</code> has what's been
+        tried.</span></li>
+    </ul>
+  </section>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const D = /*__DATA__*/null;
+const NAMES = { logreg: "Baseline", xgboost: "XGBoost", mlp: "Neural net" };
+const LONG = { logreg: "Logistic regression (baseline)", xgboost: "XGBoost", mlp: "Neural net" };
+const POSS = ["Away ball", "Unknown", "Home ball"];
+const FEATURE_NAMES = {
+  margin: "Score margin", seconds_left: "Time left", is_ot: "Overtime", home_possession: "Who has the ball",
+  strength_gap: "Team strength", margin_x_time: "Lead × time",
+};
+const S = {
+  model: D.production, poss: 2, strength: D.strength.indexOf(0),
+  margin: -2, t: D.times.indexOf(10),
+};
+const $ = (id) => document.getElementById(id);
+const pct = (tenths) => `${Math.round(tenths / 10)}%`;
+const clock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+const score = (m) => (m === 0 ? "Tied" : m > 0 ? `Home up ${m}` : `Home down ${-m}`);
+const mi = (m) => m + 15;
+
+/* ---------- colors: read tokens, mix in OKLab ---------- */
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function hexToLab(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const lin = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => {
+    c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const l = Math.cbrt(0.4122214708 * lin[0] + 0.5363325363 * lin[1] + 0.0514459929 * lin[2]);
+  const m = Math.cbrt(0.2119034982 * lin[0] + 0.6806995451 * lin[1] + 0.1073969566 * lin[2]);
+  const s = Math.cbrt(0.0883024619 * lin[0] + 0.2817188376 * lin[1] + 0.6299787005 * lin[2]);
+  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+}
+function labToHex([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  const rgb = [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s];
+  return "#" + rgb.map((c) => {
+    c = c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+    return Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, "0");
+  }).join("");
+}
+let PAL = {};
+function readPalette() {
+  for (const k of ["away", "even", "home", "low", "right", "high", "empty", "ink", "ink-2", "ink-3", "line",
+    "line-soft", "surface", "m-logreg", "m-xgboost", "m-mlp"]) PAL[k] = css(`--${k}`);
+  PAL.lab = Object.fromEntries(["away", "even", "home", "low", "right", "high"].map((k) => [k, hexToLab(PAL[k])]));
+}
+const mix = (a, b, t) => labToHex(a.map((v, i) => v + (b[i] - v) * t));
+function diverge(x, lo, mid, hi) { // x in [-1, 1]
+  x = Math.max(-1, Math.min(1, x));
+  return x < 0 ? mix(PAL.lab[mid], PAL.lab[lo], -x) : mix(PAL.lab[mid], PAL.lab[hi], x);
+}
+const probColor = (tenths) => diverge((tenths - 500) / 500, "away", "even", "home");
+const ERR_RANGE = 15;
+const errColor = (pts) => diverge(pts / ERR_RANGE, "low", "right", "high");
+
+/* ---------- data access ---------- */
+const gridP = (model, m, t, s = S.strength, p = S.poss) => D.grid[model][s][p][mi(m)][t];
+const real = (m, t, p = S.poss) => {
+  const R = D.reality, n = R.games[p][mi(m)][t];
+  return { n, actual: R.actual[p][mi(m)][t], pred: Object.fromEntries(D.models.map((k) => [k, R.pred[k][p][mi(m)][t]])) };
+};
+const ci95 = (tenths, n) => 1.96 * Math.sqrt((tenths / 1000) * (1 - tenths / 1000) / n) * 100;
+
+/* ---------- header ---------- */
+function header() {
+  $("realGames").textContent = D.reality.games_total.toLocaleString();
+  $("realSeasons").textContent = D.reality.seasons.join(" and ");
+  $("minGames").textContent = D.min_games;
+  const tr = D.split.train;
+  $("trainedNote").textContent = `Trained ${D.trained_at.replace("T", " ")} on ${tr.seasons.join(", ")}: ` +
+    `${tr.games.toLocaleString()} games, ${tr.plays.toLocaleString()} plays. The site uses ${LONG[D.production]}.`;
+  const rows = D.models.map((k) => {
+    const sc = D.scores[k] || {};
+    const f = (v, d = 4) => (v == null ? "–" : v.toFixed(d));
+    return `<tr><td><span class="chip" style="background:var(--m-${k})"></span>${LONG[k]}` +
+      `${k === D.production ? '<span class="tag">on the site</span>' : ""}</td>` +
+      `<td>${f(sc.brier)}</td><td>${f(sc.last2)}</td><td>${f(sc.log_loss)}</td>` +
+      `<td>${sc.max_bin_gap == null ? "–" : (sc.max_bin_gap * 100).toFixed(1)}</td></tr>`;
+  }).join("");
+  $("scores").innerHTML = `<thead><tr><th>Test season ${D.split.test.seasons[0]}</th><th>Brier</th>` +
+    `<th>Brier, last 2 min</th><th>Log loss</th><th>Worst calibration bin (pts)</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+/* ---------- controls ---------- */
+function seg(el, items, current, onPick) {
+  el.innerHTML = items.map((it, i) =>
+    `<button type="button" data-i="${i}" aria-pressed="${i === current}">${it}</button>`).join("");
+  el.onclick = (e) => { const b = e.target.closest("button"); if (b) onPick(+b.dataset.i); };
+}
+function controls() {
+  seg($("ctlModel"), D.models.map((k) => NAMES[k]), D.models.indexOf(S.model), (i) => { S.model = D.models[i]; render(); });
+  seg($("ctlPoss"), POSS, S.poss, (i) => { S.poss = i; render(); });
+  seg($("ctlStrength"), D.strength.map((v) => (v > 0 ? `+${v}` : v === 0 ? "Even" : `${v}`.replace("-", "−"))),
+    S.strength, (i) => { S.strength = i; render(); });
+}
+
+/* ---------- ask ---------- */
+function ask() {
+  $("inMargin").value = S.margin; $("inTime").max = D.times.length - 1; $("inTime").value = S.t;
+  $("outMargin").textContent = score(S.margin);
+  $("outTime").textContent = `${clock(D.times[S.t])} left`;
+  const sv = D.strength[S.strength];
+  $("askState").textContent = `${POSS[S.poss]}. Home team ${sv === 0 ? "evenly matched" : sv > 0 ? `better by ${sv} points a game` : `worse by ${-sv} points a game`}.`;
+  const r = real(S.margin, S.t);
+  let html = D.models.map((k) =>
+    `<div class="answer"><span class="who"><span class="chip" style="background:var(--m-${k})"></span>${NAMES[k]}</span>` +
+    `<span class="big">${pct(gridP(k, S.margin, S.t))}</span></div>`).join("");
+  if (r.n >= D.min_games) {
+    html += `<div class="answer real"><span class="who">Real games</span><span class="big">${pct(r.actual)}</span>` +
+      `<span class="note num">of ${r.n} games, ±${Math.round(ci95(r.actual, r.n))} pts</span></div>`;
+    const worst = Math.max(...D.models.map((k) => Math.abs(r.pred[k] - r.actual))) / 10;
+    const noise = ci95(r.actual, r.n);
+    html += `<p class="verdict">In those ${r.n} real games the models averaged ` +
+      D.models.map((k) => `${NAMES[k]} ${pct(r.pred[k])}`).join(", ") + `, and the home team won ${pct(r.actual)}. ` +
+      (worst > noise ? `The biggest gap, ${Math.round(worst)} points, is more than the noise for this many games (±${Math.round(noise)}).`
+        : `Every gap is within the noise for this many games (±${Math.round(noise)}).`) +
+      ` Real games mix all team strengths, so compare with strength set to Even.</p>`;
+  } else {
+    html += `<div class="answer real"><span class="who">Real games</span><span class="big muted">–</span>` +
+      `<span class="note">${r.n} games: not enough to compare</span></div>`;
+  }
+  $("answers").innerHTML = html;
+}
+
+/* ---------- heatmaps ---------- */
+const G = { left: 74, top: 8, cw: 30, ch: 14, bottom: 46 };
+const X_LABELS = [2880, 1440, 720, 360, 180, 60, 30, 10, 2];
+function heatmap(svg, cell, title) {
+  const W = G.left + D.times.length * G.cw + 8, H = G.top + D.margins.length * G.ch + G.bottom;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", W); svg.style.maxWidth = "100%";
+  svg.style.minWidth = "620px"; svg.setAttribute("aria-label", title);
+  let out = "";
+  D.margins.forEach((m, r) => {
+    const y = G.top + (D.margins.length - 1 - r) * G.ch;
+    D.times.forEach((t, c) => {
+      const { fill, empty } = cell(m, c);
+      const x0 = G.left + c * G.cw;
+      out += `<rect data-m="${m}" data-t="${c}" x="${x0}" y="${y}" width="${G.cw - 1}" height="${G.ch - 1}" ` +
+        `fill="${empty ? "transparent" : fill}" style="cursor:pointer"></rect>`;
+      if (empty) out += `<circle cx="${x0 + (G.cw - 1) / 2}" cy="${y + (G.ch - 1) / 2}" r="1.5" fill="${PAL["ink-3"]}" opacity="0.6" pointer-events="none"></circle>`;
+    });
+    if (m % 5 === 0) out += `<text x="${G.left - 8}" y="${y + G.ch / 2 + 4}" text-anchor="end">${m === 0 ? "Tied" : m > 0 ? `+${m}` : `−${-m}`}</text>`;
+  });
+  const yb = G.top + D.margins.length * G.ch;
+  D.times.forEach((t, c) => {
+    if (X_LABELS.includes(t)) out += `<text x="${G.left + c * G.cw + G.cw / 2}" y="${yb + 14}" text-anchor="middle">${clock(t)}</text>`;
+  });
+  out += `<text class="axis-title" x="${G.left}" y="${yb + 36}">Time left in the game →</text>`;
+  out += `<text class="axis-title" transform="translate(12 ${G.top + (D.margins.length * G.ch) / 2}) rotate(-90)" text-anchor="middle">Home lead</text>`;
+  const sy = G.top + (D.margins.length - 1 - mi(S.margin)) * G.ch;
+  out += `<rect x="${G.left + S.t * G.cw - 1.5}" y="${sy - 1.5}" width="${G.cw + 2}" height="${G.ch + 2}" fill="none" stroke="${PAL.ink}" stroke-width="2" rx="2"></rect>`;
+  svg.innerHTML = out;
+}
+function wireHeat(svg, tipFn) {
+  svg.onclick = (e) => {
+    const r = e.target.closest("rect[data-m]"); if (!r) return;
+    S.margin = +r.dataset.m; S.t = +r.dataset.t; render();
+  };
+  svg.onpointermove = (e) => {
+    const r = e.target.closest("rect[data-m]");
+    if (!r) return hideTip();
+    showTip(e, tipFn(+r.dataset.m, +r.dataset.t));
+  };
+  svg.onpointerleave = hideTip;
+}
+const where = (m, c) => `${score(m)}, ${clock(D.times[c])} left, ${POSS[S.poss].toLowerCase()}`;
+function heatProb() {
+  heatmap($("heatProb"), (m, c) => ({ fill: probColor(gridP(S.model, m, c)) }),
+    `${LONG[S.model]}: home win chance by score and time left`);
+  wireHeat($("heatProb"), (m, c) => `${where(m, c)}<br><strong>${NAMES[S.model]}: ${pct(gridP(S.model, m, c))}</strong>`);
+  $("legendProb").innerHTML = `<span class="ends">Away wins <span class="ramp" style="background:linear-gradient(90deg,` +
+    `${[0, 250, 500, 750, 1000].map(probColor).join(",")})"></span> Home wins</span>` +
+    `<span class="muted">${NAMES[S.model]} · ${POSS[S.poss].toLowerCase()} · strength ${D.strength[S.strength] > 0 ? "+" : ""}${D.strength[S.strength]}</span>`;
+}
+function heatErr() {
+  heatmap($("heatErr"), (m, c) => {
+    const r = real(m, c);
+    return r.n < D.min_games ? { fill: PAL.empty, empty: true } : { fill: errColor((r.pred[S.model] - r.actual) / 10) };
+  }, `${LONG[S.model]}: prediction minus real home win rate`);
+  wireHeat($("heatErr"), (m, c) => {
+    const r = real(m, c);
+    if (r.n < D.min_games) return `${where(m, c)}<br>${r.n} games: not enough to compare`;
+    const d = Math.round((r.pred[S.model] - r.actual) / 10);
+    return `${where(m, c)}<br>${NAMES[S.model]} ${pct(r.pred[S.model])}, real ${pct(r.actual)} of ${r.n} games<br>` +
+      `<strong>${d === 0 ? "Right on" : d > 0 ? `${d} pts too high` : `${-d} pts too low`}</strong> (noise ±${Math.round(ci95(r.actual, r.n))})`;
+  });
+  $("legendErr").innerHTML = `<span class="ends">Model too low <span class="ramp" style="background:linear-gradient(90deg,` +
+    `${[-15, -7.5, 0, 7.5, 15].map(errColor).join(",")})"></span> Model too high</span>` +
+    `<span class="muted">±${ERR_RANGE} points at the ends · ${NAMES[S.model]} · ${POSS[S.poss].toLowerCase()}</span>`;
+}
+
+/* ---------- lines ---------- */
+function lines() {
+  const svg = $("lines"), L = { left: 44, right: 96, top: 12, bottom: 46 }, cw = 30, h = 260;
+  const W = L.left + D.times.length * cw + L.right, H = L.top + h + L.bottom;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", W); svg.style.maxWidth = "100%"; svg.style.minWidth = "620px";
+  const x = (c) => L.left + c * cw + cw / 2, y = (tenths) => L.top + h - (tenths / 1000) * h;
+  let out = "";
+  for (const g of [0, 250, 500, 750, 1000]) {
+    out += `<line x1="${L.left}" x2="${W - L.right}" y1="${y(g)}" y2="${y(g)}" stroke="${g === 500 ? PAL.line : PAL["line-soft"]}" ${g === 500 ? 'stroke-dasharray="4 4"' : ""}></line>`;
+    out += `<text x="${L.left - 8}" y="${y(g) + 4}" text-anchor="end">${g / 10}%</text>`;
+  }
+  D.times.forEach((t, c) => { if (X_LABELS.includes(t)) out += `<text x="${x(c)}" y="${L.top + h + 16}" text-anchor="middle">${clock(t)}</text>`; });
+  out += `<text class="axis-title" x="${L.left}" y="${L.top + h + 38}">Time left in the game →</text>`;
+  out += `<line x1="${x(S.t)}" x2="${x(S.t)}" y1="${L.top}" y2="${L.top + h}" stroke="${PAL.line}"></line>`;
+  // real games: dot with a 95% range
+  D.times.forEach((t, c) => {
+    const r = real(S.margin, c); if (r.n < D.min_games) return;
+    const e = ci95(r.actual, r.n) * 10;
+    out += `<line x1="${x(c)}" x2="${x(c)}" y1="${y(Math.min(1000, r.actual + e))}" y2="${y(Math.max(0, r.actual - e))}" stroke="${PAL["ink-3"]}" stroke-width="1.5"></line>`;
+    out += `<circle cx="${x(c)}" cy="${y(r.actual)}" r="4" fill="${PAL.ink}" stroke="${PAL.surface}" stroke-width="2"></circle>`;
+  });
+  const ends = [];
+  for (const k of D.models) {
+    const pts = D.times.map((t, c) => `${x(c)},${y(gridP(k, S.margin, c))}`).join(" ");
+    out += `<polyline points="${pts}" fill="none" stroke="${PAL[`m-${k}`]}" stroke-width="2" stroke-linejoin="round"></polyline>`;
+    ends.push({ k, v: gridP(k, S.margin, D.times.length - 1) });
+  }
+  // direct labels at the right end, nudged apart
+  ends.sort((a, b) => b.v - a.v);
+  let lastY = -Infinity;
+  for (const e of ends) {
+    let ly = Math.max(y(e.v) + 4, lastY + 14); lastY = ly;
+    out += `<text x="${W - L.right + 8}" y="${ly}" style="fill:${PAL["ink-2"]}">${NAMES[e.k]} ${pct(e.v)}</text>`;
+  }
+  svg.innerHTML = out;
+  svg.setAttribute("aria-label", `Home win chance through the game at ${score(S.margin).toLowerCase()}, ${POSS[S.poss].toLowerCase()}`);
+  $("lineCaption").textContent = `${score(S.margin)} with ${POSS[S.poss].toLowerCase()}, from tipoff to the final seconds. ` +
+    `Lines are the models at the strength you picked; dots are real games (any strength) with their 95% range. ` +
+    `Change the score with the slider above or by clicking a map.`;
+  $("legendLine").innerHTML = D.models.map((k) => `<span><span class="chip" style="background:var(--m-${k})"></span>${NAMES[k]}</span>`).join("") +
+    `<span><span class="chip" style="background:var(--ink);border-radius:50%"></span>Real games, 95% range</span>`;
+}
+
+/* ---------- leans ---------- */
+function leans() {
+  const lr = D.leans.logreg, xg = D.leans.xgboost;
+  if (lr) {
+    const max = Math.max(...Object.values(lr).map(Math.abs));
+    $("leanLogreg").innerHTML = `<h3>Baseline: weight per input</h3><p class="muted small">Change in log-odds for a one-standard-deviation change. Bars left of the line push toward the away team.</p>` +
+      D.features.map((f) => {
+        const v = lr[f], w = (Math.abs(v) / max) * 50;
+        return `<div class="bar"><span>${FEATURE_NAMES[f] || f}</span><span class="track"><span class="axis" style="left:50%"></span>` +
+          `<span class="fill" style="background:var(--m-logreg);${v >= 0 ? `left:50%;width:${w}%` : `left:${50 - w}%;width:${w}%`}"></span></span>` +
+          `<span class="num">${v > 0 ? "+" : ""}${v.toFixed(2)}</span></div>`;
+      }).join("");
+  }
+  if (xg) {
+    const max = Math.max(...Object.values(xg));
+    $("leanXgb").innerHTML = `<h3>XGBoost: share of what its splits gained</h3><p class="muted small">How much each input improved the trees, all splits added up.</p>` +
+      D.features.map((f) => `<div class="bar"><span>${FEATURE_NAMES[f] || f}</span><span class="track">` +
+        `<span class="fill" style="background:var(--m-xgboost);left:0;width:${(xg[f] / max) * 100}%"></span></span>` +
+        `<span class="num">${(xg[f] * 100).toFixed(1)}%</span></div>`).join("");
+  }
+  if (lr && xg) {
+    $("leanNote").textContent = `Look at "Who has the ball". The baseline gives it ${lr.home_possession.toFixed(2)}, against ` +
+      `${lr.margin_x_time.toFixed(1)} for lead × time, and XGBoost gets ${(xg.home_possession * 100).toFixed(1)}% of its gain from it. ` +
+      `For most of a game the ball is worth about a point, which barely moves the chance, so the models learn that it hardly ` +
+      `matters. In the last seconds it can decide the game, and the models carry the small weight there too.`;
+  }
+}
+
+/* ---------- reasons (numbers from the training data) ---------- */
+function reasons() {
+  const x = D.mix, share = (x.close_rows / x.rows) * 100, fh = (x.first_half_rows / x.rows) * 100;
+  $("reasons").innerHTML = [
+    ["Very few examples.", `Of ${x.rows.toLocaleString()} training plays, ${x.close_rows.toLocaleString()} (${share.toFixed(1)}%) ` +
+      `come from the last 30 seconds of a game within 3 points, from ${x.close_games.toLocaleString()} games. All plays in a game ` +
+      `share one result, so the models learn close finishes from a few hundred endings.`],
+    ["Training is tuned for the whole game.", `Every play counts the same, and the first half alone is ${fh.toFixed(0)}% of the plays. ` +
+      `Early stopping halts when the whole-game score stops improving, before the rare end-game patterns are learned.`],
+    ["The baseline can't bend.", `It has one weight per input for the entire game. The lead gets help from <code>margin_x_time</code>, ` +
+      `which grows as time runs out, but possession has no such partner, so the ball counts for the same small amount at tipoff and with 5 seconds left. ` +
+      `A seventh input that scaled it by time didn't help on the validation season (experiment E1).`],
+    ["The models can't see what decides the end.", `Timeouts left (a timeout moves the ball to half court), the foul bonus, the shot clock, ` +
+      `and who's shooting free throws aren't inputs.`],
+    ["Possession is a guess.", `It's read from the last made shot, rebound or turnover, and matches the NBA's own record about 9 times in 10 ` +
+      `in the last 30 seconds (experiment E2). Good, not perfect.`],
+  ].map(([h, b]) => `<li><strong>${h}</strong><span>${b}</span></li>`).join("");
+}
+
+/* ---------- tooltip ---------- */
+const tip = $("tip");
+function showTip(e, html) {
+  tip.innerHTML = html; tip.hidden = false;
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  let left = e.clientX + pad, top = e.clientY + pad;
+  if (left + w > innerWidth - 8) left = e.clientX - w - pad;
+  if (top + h > innerHeight - 8) top = e.clientY - h - pad;
+  tip.style.left = `${Math.max(8, left)}px`; tip.style.top = `${Math.max(8, top)}px`;
+}
+function hideTip() { tip.hidden = true; }
+
+/* ---------- wiring ---------- */
+function render() { readPalette(); controls(); ask(); heatProb(); heatErr(); lines(); }
+$("inMargin").oninput = (e) => { S.margin = +e.target.value; render(); };
+$("inTime").oninput = (e) => { S.t = +e.target.value; render(); };
+header(); leans(); reasons(); render();
+const rerender = () => { render(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", rerender);
+new MutationObserver(rerender).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>

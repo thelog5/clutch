@@ -1,7 +1,7 @@
 PY ?= .venv/bin/python
 UV ?= uv
 
-.PHONY: setup pull pull-smoke pull-sample refresh features train eval precompute deploy-bundle synthetic api api-fake web test lint
+.PHONY: setup pull pull-smoke pull-sample explore refresh features train eval precompute deploy-bundle synthetic api api-fake web test lint
 
 ## Python env with training + dev extras (torch, matplotlib, pytest, ruff)
 setup:
@@ -37,6 +37,10 @@ features:
 train:
 	$(PY) -m model.train
 	$(PY) -m model.evaluate
+
+## Page for looking inside the trained models -> reports/explorer.html (rerun after make train)
+explore:
+	$(PY) -m scripts.model_explorer
 
 eval:
 	$(PY) -m model.evaluate

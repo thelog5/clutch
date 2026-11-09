@@ -4,7 +4,12 @@ import { compactCount } from "../format";
 import { useAsync } from "../hooks/useAsync";
 import { seasonRange } from "./ModelCharts";
 
-const SERVING: Record<string, string> = { logreg: "the logistic regression", xgboost: "XGBoost", mlp: "the neural network" };
+const SERVING: Record<string, string> = {
+  logreg: "the logistic regression",
+  xgboost: "XGBoost",
+  mlp: "the neural network",
+  endgame: "the end-game model",
+};
 const STACK = ["Python", "pandas", "scikit-learn", "XGBoost", "PyTorch", "FastAPI", "WebSockets", "React", "TypeScript"];
 
 /** Home-page summary of what the site is: an ML model, how it learned, how it was tested. Numbers from GET /model. */

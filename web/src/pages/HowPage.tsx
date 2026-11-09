@@ -21,6 +21,12 @@ const MODELS: Record<string, { label: string; inline: string; about: string }> =
     inline: "the neural network",
     about: "A small network with two hidden layers of 32 units, trained in batches of 4,096 plays.",
   },
+  endgame: {
+    label: "End-game model",
+    inline: "the end-game model",
+    about:
+      "XGBoost trained only on the last 3 minutes, where close finishes are a sliver of the data. It takes over from the best of the three as the clock runs from 3:00 to 2:00.",
+  },
 };
 const label = (name: string) => MODELS[name]?.label ?? name;
 
@@ -175,8 +181,10 @@ export function HowPage() {
           </dl>
         </Step>
 
-        <Step n="02" title="Three models learn from it">
-          <p>All three see the same rows and the same six inputs.</p>
+        <Step n="02" title="Four models learn from it">
+          <p>
+            Three whole-game models see the same rows and the same six inputs. A fourth learns only from the last 3 minutes.
+          </p>
           <ul className="model-list">
             {Object.entries(card?.models ?? { logreg: null, xgboost: null, mlp: null }).map(([name, m]) => (
               <li key={name}>

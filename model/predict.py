@@ -31,7 +31,6 @@ MODEL_NAMES = ("logreg", "xgboost", "mlp", "endgame")
 # the chart never jumps: none of it at 3:00 left, all of it from 2:00 on.
 ENDGAME_START = 180.0
 ENDGAME_FULL = 120.0
-_SECONDS_LEFT = FEATURES.index("seconds_left")
 
 
 def endgame_weight(seconds_left) -> np.ndarray:
@@ -39,45 +38,60 @@ def endgame_weight(seconds_left) -> np.ndarray:
     t = np.asarray(seconds_left, dtype=np.float64)
     return np.clip((ENDGAME_START - t) / (ENDGAME_START - ENDGAME_FULL), 0.0, 1.0)
 
+
 # XGBoost sees team strength rounded to whole points. strength_gap is the same
 # for every play in a game and nearly unique to it, so at full precision the
 # trees can single out individual training games and memorize how they ended
-# (docs/EXPERIMENTS.md, E3).
+# (docs/EXPERIMENTS.md, E3). Each trained booster records the step it used.
 XGB_STRENGTH_STEP = 1.0
 
 
-def xgb_inputs(x: np.ndarray) -> np.ndarray:
+def xgb_inputs(x: np.ndarray, step: float | None = XGB_STRENGTH_STEP, features: list[str] = FEATURES) -> np.ndarray:
     """Feature matrix as XGBoost sees it, in training and serving alike."""
     x = np.array(x, dtype=np.float32, copy=True)
-    i = FEATURES.index("strength_gap")
-    x[:, i] = np.round(x[:, i] / XGB_STRENGTH_STEP) * XGB_STRENGTH_STEP
+    if step:
+        i = features.index("strength_gap")
+        x[:, i] = np.round(x[:, i] / step) * step
     return x
 
 
+def _read_meta(artifacts_dir: Path) -> dict:
+    path = artifacts_dir / "meta.json"
+    return json.loads(path.read_text()) if path.exists() else {}
+
+
 class WinProbModel:
-    def __init__(self, name: str, artifacts_dir: Path):
+    """One trained model. Its inputs and preprocessing come from the artifacts
+    themselves (meta.json, booster attributes), so a model trained on an older
+    feature set still scores the way it did when it was trained."""
+
+    def __init__(self, name: str, artifacts_dir: Path, features: list[str] | None = None):
         self.name = name
         self.dir = Path(artifacts_dir)
+        meta = _read_meta(self.dir)
+        self.features = list(features or meta.get("features") or FEATURES)
+        self._seconds_left = self.features.index("seconds_left")
         if name == "logreg":
             import joblib
 
             self._clf = joblib.load(self.dir / "logreg.joblib")
-        elif name == "xgboost":
+        elif name in ("xgboost", "endgame"):
             import xgboost as xgb
 
-            self._booster = xgb.Booster()
-            self._booster.load_model(self.dir / "xgboost.json")
+            booster = xgb.Booster()
+            booster.load_model(self.dir / ("xgboost.json" if name == "xgboost" else "endgame_xgb.json"))
+            step = booster.attr("strength_step")
+            self._step = float(step) if step else meta.get("xgboost_strength_step")
+            if name == "xgboost":
+                self._booster = booster
+            else:
+                self._late = booster
+                # The whole-game model it hands over from, recorded at training time.
+                self.base = booster.attr("base") or "logreg"
+                self._base = WinProbModel(self.base, self.dir, self.features)
         elif name == "mlp":
             with np.load(self.dir / "mlp.npz") as f:
                 self._params = {k: f[k] for k in f.files}
-        elif name == "endgame":
-            import xgboost as xgb
-
-            self._late = xgb.Booster()
-            self._late.load_model(self.dir / "endgame_xgb.json")
-            # The whole-game model it hands over from, recorded at training time.
-            self.base = self._late.attr("base") or "logreg"
-            self._base = WinProbModel(self.base, self.dir)
         else:
             raise ValueError(f"unknown model {name!r}")
         # Optional isotonic calibration (model.train --calibrate): a monotone
@@ -88,24 +102,25 @@ class WinProbModel:
             with np.load(cal) as f:
                 self._calibration = (f["x"], f["y"])
 
+    def _xgb(self, booster, x: np.ndarray) -> np.ndarray:
+        import xgboost as xgb
+
+        return booster.predict(xgb.DMatrix(xgb_inputs(x, self._step, self.features), feature_names=self.features))
+
     def predict_array(self, x: np.ndarray) -> np.ndarray:
+        """Rows in ``self.features`` order."""
         x = np.asarray(x, dtype=np.float32)
         if self.name == "logreg":
             p = self._clf.predict_proba(x)[:, 1]
         elif self.name == "xgboost":
-            import xgboost as xgb
-
-            p = self._booster.predict(xgb.DMatrix(xgb_inputs(x), feature_names=FEATURES))
+            p = self._xgb(self._booster, x)
         elif self.name == "endgame":
             p = self._base.predict_array(x)
-            w = endgame_weight(x[:, _SECONDS_LEFT])
+            w = endgame_weight(x[:, self._seconds_left])
             late = w > 0
             if late.any():
-                import xgboost as xgb
-
-                q = self._late.predict(xgb.DMatrix(xgb_inputs(x[late]), feature_names=FEATURES))
                 p = p.copy()
-                p[late] = (1 - w[late]) * p[late] + w[late] * q
+                p[late] = (1 - w[late]) * p[late] + w[late] * self._xgb(self._late, x[late])
         else:
             p = forward_numpy(self._params, x)
         return np.clip(self.calibrate(p.astype(np.float64)), 1e-6, 1 - 1e-6)
@@ -121,20 +136,20 @@ class WinProbModel:
         return self._calibration is not None
 
     def predict_frame(self, df: pd.DataFrame) -> np.ndarray:
-        return self.predict_array(df[FEATURES].to_numpy(dtype=np.float32))
+        return self.predict_array(df[self.features].to_numpy(dtype=np.float32))
 
     def predict(self, state: dict) -> float:
-        return float(self.predict_array(np.array([state_vector(state)]))[0])
+        return float(self.predict_array(np.array([state_vector(state, self.features)]))[0])
 
 
-def state_vector(state: dict) -> list[float]:
+def state_vector(state: dict, features: list[str] = FEATURES) -> list[float]:
     s = dict(state)
     if "margin_x_time" not in s:
         s["margin_x_time"] = s["margin"] / math.sqrt(s["seconds_left"] + 1.0)
     s.setdefault("is_ot", 0)
     s.setdefault("home_possession", 0.5)
     s.setdefault("strength_gap", 0.0)
-    return [float(s[f]) for f in FEATURES]
+    return [float(s[f]) for f in features]
 
 
 def load_meta(artifacts_dir: Path | None = None) -> dict:

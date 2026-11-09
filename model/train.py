@@ -92,8 +92,10 @@ def train_xgboost(x, y, xv, yv, **overrides):
         early_stopping_rounds=50,
         verbose_eval=100,
     )
-    # Keep only the trees up to the best iteration.
-    return booster[: booster.best_iteration + 1]
+    # Keep only the trees up to the best iteration, and record the preprocessing.
+    booster = booster[: booster.best_iteration + 1]
+    booster.set_attr(strength_step=str(XGB_STRENGTH_STEP))
+    return booster
 
 
 # End-of-game model (docs/EXPERIMENTS.md, E4): same inputs and constraints as
@@ -191,7 +193,7 @@ def main() -> None:
 
     val_scores = {}
     for name in names:
-        p = WinProbModel(name, out).predict_array(xv)
+        p = WinProbModel(name, out, FEATURES).predict_array(xv)
         val_scores[name] = {"brier": float(brier_score_loss(yv, p)), "log_loss": float(log_loss(yv, p))}
         log.info("val %-8s brier %.5f  logloss %.5f", name, *val_scores[name].values())
 
@@ -203,7 +205,7 @@ def main() -> None:
     timings["endgame"] = time.time() - t
     log.info("endgame trained in %.1fs (%d trees, blended into %s)", timings["endgame"],
              endgame.num_boosted_rounds(), base)  # fmt: skip
-    p = WinProbModel("endgame", out).predict_array(xv)
+    p = WinProbModel("endgame", out, FEATURES).predict_array(xv)
     val_scores["endgame"] = {"brier": float(brier_score_loss(yv, p)), "log_loss": float(log_loss(yv, p))}
     log.info("val %-8s brier %.5f  logloss %.5f", "endgame", *val_scores["endgame"].values())
 
@@ -215,7 +217,7 @@ def main() -> None:
         if cal_path.exists():
             cal_path.unlink()
         if args.calibrate:
-            xs, ys = fit_isotonic(WinProbModel(name, out).predict_array(xv), yv)
+            xs, ys = fit_isotonic(WinProbModel(name, out, FEATURES).predict_array(xv), yv)
             np.savez(cal_path, x=xs, y=ys)
             log.info("%s: isotonic calibration with %d knots", name, len(xs))
     meta = {

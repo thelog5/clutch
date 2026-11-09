@@ -36,6 +36,7 @@ MIN_GAMES = 20  # reality cells with fewer games are shown as "not enough games"
 
 
 def state_frame(margin, seconds_left, possession, strength) -> pd.DataFrame:
+    """Game states with every input the models take (later inputs get neutral defaults)."""
     df = pd.DataFrame(
         {"margin": margin, "seconds_left": seconds_left, "home_possession": possession, "strength_gap": strength}
     ).astype(float)
@@ -119,8 +120,9 @@ def leans(models: dict) -> dict:
     return out
 
 
-def scores() -> dict:
-    path = config.REPORTS_DIR / "metrics.json"
+def scores(artifacts_dir: Path | None = None) -> dict:
+    """Test-season scores from the evaluation report, when it scored these artifacts."""
+    path = (Path(artifacts_dir) if artifacts_dir else config.REPORTS_DIR) / "metrics.json"
     if not path.exists():
         return {}
     m = json.loads(path.read_text())
@@ -146,9 +148,9 @@ def training_mix() -> dict:
     }
 
 
-def build() -> dict:
-    meta = load_meta()
-    models = {n: load_model(n) for n in meta["models"]}
+def build(artifacts_dir: Path | None = None) -> dict:
+    meta = load_meta(artifacts_dir)
+    models = {n: load_model(n, str(artifacts_dir) if artifacts_dir else None) for n in meta["models"]}
     return {
         "trained_at": meta["trained_at"],
         "data_source": meta.get("data_source", "nba"),
@@ -164,7 +166,7 @@ def build() -> dict:
         "grid": model_grid(models),
         "reality": reality(models, [config.VAL_SEASON, config.TEST_SEASON]),
         "leans": leans(models),
-        "scores": scores(),
+        "scores": scores(artifacts_dir),
         "mix": training_mix(),
     }
 
@@ -172,19 +174,25 @@ def build() -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("--fragment", type=Path, help="also write the page without its document wrapper")
+    parser.add_argument("--artifacts", type=Path, help="score these model files instead of model/artifacts")
+    parser.add_argument("--out", type=Path, default=OUT)
     args = parser.parse_args()
+    write(args.artifacts, args.out, args.fragment)
 
-    data = json.dumps(build(), separators=(",", ":"))
+
+def write(artifacts_dir: Path | None, out: Path = OUT, fragment: Path | None = None) -> Path:
+    data = json.dumps(build(artifacts_dir), separators=(",", ":"))
     page = TEMPLATE.read_text().replace("/*__DATA__*/null", data)
-    OUT.parent.mkdir(parents=True, exist_ok=True)
+    out.parent.mkdir(parents=True, exist_ok=True)
     head = (
         '<!doctype html>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
     )
-    OUT.write_text(head + page)
-    print(f"wrote {OUT} ({OUT.stat().st_size / 1e3:.0f} KB)")
-    if args.fragment:
-        args.fragment.write_text(page)
+    out.write_text(head + page)
+    print(f"wrote {out} ({out.stat().st_size / 1e3:.0f} KB)")
+    if fragment:
+        fragment.write_text(page)
+    return out
 
 
 if __name__ == "__main__":

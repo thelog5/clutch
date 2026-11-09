@@ -71,9 +71,9 @@ def score(y, p) -> dict:
     }
 
 
-def evaluate_model(name: str, test: pd.DataFrame) -> tuple[dict, pd.DataFrame]:
+def evaluate_model(name: str, test: pd.DataFrame, artifacts_dir=None) -> tuple[dict, pd.DataFrame]:
     y = test["home_win"].to_numpy()
-    p = WinProbModel(name, config.ARTIFACTS_DIR).predict_frame(test)
+    p = WinProbModel(name, artifacts_dir or config.ARTIFACTS_DIR).predict_frame(test)
     bins = calibration_bins(y, p)
     solid = bins[bins["n"] >= MIN_BIN_ROWS]
     out = score(y, p) | {

@@ -20,5 +20,5 @@ stamp="$(date '+%Y-%m-%d %H:%M %Z')"
 printf '| %s | %s | %s |\n' "$stamp" "$block" "$note" >> docs/BUILD_LOG.md
 
 git add -A
-git commit -q -m "$subject" -m "Block: $block" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -q -m "$subject" -m "Block: $block"
 git log -1 --format='%h %s'

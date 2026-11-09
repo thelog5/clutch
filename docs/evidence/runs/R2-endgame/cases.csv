@@ -1,0 +1,13 @@
+case,game_id,action_number,situation,result,pred_logreg,pred_xgboost,pred_mlp,pred_endgame
+C01,0022500943,756,"Home up 2, away ball",Home lost 124-130 in overtime,0.9992,0.9946,0.9824,0.9839
+C02,0022500199,708,"Home down 3, home ball",Home won 137-135 in overtime,0.0009,0.0247,0.0352,0.0136
+C03,0022500974,707,"Home down 3, home ball",Home won 127-125 in overtime,0.0021,0.0076,0.0166,0.0184
+C04,0022500516,682,"Home up 2, away ball",Home lost 96-97,0.9977,0.992,0.9823,0.9825
+C05,0022501024,683,"Home up 3, away ball",Home lost 104-105,0.9975,0.9942,0.9812,0.9687
+C06,0022500858,770,"Home down 3, home ball",Home won 122-119 in overtime,0.0026,0.0113,0.0221,0.0168
+C07,0022500236,650,"Home down 2, home ball",Home won 117-113 in overtime,0.0036,0.0152,0.0357,0.0163
+C08,0022500401,674,"Home down 3, home ball",Home won 125-124 in overtime,0.0069,0.0126,0.0473,0.0991
+C09,0022500294,706,"Home down 3, home ball",Home won 118-111 in overtime,0.0078,0.0075,0.0392,0.0799
+C10,0022501218,716,"Home up 3, away ball",Home lost 111-119 in overtime,0.9906,0.9932,0.9393,0.9527
+C11,0022501027,660,"Home down 1, home ball",Home won 123-122,0.0119,0.012,0.0475,0.0723
+C12,0022500375,732,"Home down 2, home ball",Home won 133-128 in overtime,0.0121,0.0273,0.0709,0.1195

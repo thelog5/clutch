@@ -1,0 +1,112 @@
+{
+  "run": "R1-xgboost-fix",
+  "label": "E3: XGBoost no longer memorizes training games",
+  "snapshot_taken": "2026-11-09T17:50:20",
+  "commit": "79dbcb2",
+  "artifact_sha256": {
+    "logreg.joblib": "685e05a101f24eac4caa68b8a57d9e4b08d19ac94bdc6331a483d9f832696533",
+    "meta.json": "3feadf94b6b3f43906af3613b290b994f2bc31aff3ab06bc2fc7db50638de584",
+    "mlp.npz": "c8c57249a8403cbd40ea42e38200517a7d7b3e9e34616d0347c3a966c7ff13a2",
+    "xgboost.json": "94ee89f010a2a6c61f392821ecf47db8ecce82a57a5ea22a7dbc6763695d5b7d"
+  },
+  "trained_at": "2026-11-09T01:40:32",
+  "data_source": "nba",
+  "inputs": [
+    "margin",
+    "seconds_left",
+    "is_ot",
+    "home_possession",
+    "strength_gap",
+    "margin_x_time"
+  ],
+  "models": [
+    "logreg",
+    "xgboost",
+    "mlp"
+  ],
+  "production": "logreg",
+  "split": {
+    "train": {
+      "seasons": [
+        "2021-22",
+        "2022-23",
+        "2023-24"
+      ],
+      "games": 3685,
+      "plays": 1800726
+    },
+    "val": {
+      "seasons": [
+        "2024-25"
+      ],
+      "games": 1230,
+      "plays": 606536
+    },
+    "test": {
+      "seasons": [
+        "2025-26"
+      ],
+      "games": 1229,
+      "plays": 621370
+    }
+  },
+  "validation_scores": {
+    "logreg": {
+      "brier": 0.15050619227013032,
+      "log_loss": 0.4500842520403977
+    },
+    "xgboost": {
+      "brier": 0.15088548260571372,
+      "log_loss": 0.4515990277842157
+    },
+    "mlp": {
+      "brier": 0.15068974240707725,
+      "log_loss": 0.4505921958511283
+    }
+  },
+  "settings": {
+    "xgboost_trees": 174,
+    "xgboost_strength_step": 1.0,
+    "logreg": {
+      "type": "logistic regression",
+      "C": 1.0,
+      "inputs": "standardized"
+    },
+    "xgboost": {
+      "max_depth": 6,
+      "eta": 0.05,
+      "subsample": 0.8,
+      "lambda": 1.0,
+      "max_rounds": 3000,
+      "early_stopping_rounds": 50,
+      "monotone": "+ margin, possession, strength, margin x time",
+      "min_child_weight": 1000,
+      "strength_step": 1.0,
+      "interaction_groups": [
+        [
+          "margin",
+          "seconds_left",
+          "is_ot",
+          "home_possession",
+          "margin_x_time"
+        ],
+        [
+          "strength_gap",
+          "seconds_left",
+          "is_ot"
+        ]
+      ]
+    },
+    "mlp": {
+      "hidden_layers": [
+        32,
+        32
+      ],
+      "optimizer": "Adam",
+      "lr": 0.002,
+      "batch_size": 4096,
+      "max_epochs": 30,
+      "early_stopping_patience": 4
+    }
+  }
+}

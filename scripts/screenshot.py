@@ -1,0 +1,79 @@
+"""Screenshot a page in headless Google Chrome after a real-time wait (so charts and fonts finish).
+
+    .venv/bin/python -m scripts.screenshot file:///path/page.html out.png [--wait 4] [--width 1280] [--height 4300]
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import base64
+import json
+import shutil
+import subprocess
+import tempfile
+import time
+import urllib.request
+from pathlib import Path
+
+CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+PORT = 9333
+
+
+async def _shoot(url: str, out: Path, wait: float, width: int, height: int) -> None:
+    import websockets
+
+    chrome = shutil.which("google-chrome") or shutil.which("chromium") or CHROME
+    profile = tempfile.mkdtemp(prefix="clutch-shot-")
+    proc = subprocess.Popen(
+        [chrome, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--remote-debugging-port={PORT}",
+         f"--user-data-dir={profile}", f"--window-size={width},{height}", "about:blank"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )  # fmt: skip
+    try:
+        page = None
+        for _ in range(50):
+            try:
+                targets = json.load(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json"))
+                page = next(t for t in targets if t["type"] == "page")
+                break
+            except Exception:
+                time.sleep(0.2)
+        if page is None:
+            raise RuntimeError("Chrome didn't start")
+        async with websockets.connect(page["webSocketDebuggerUrl"], max_size=50_000_000) as ws:
+            n = 0
+
+            async def call(method, **params):
+                nonlocal n
+                n += 1
+                await ws.send(json.dumps({"id": n, "method": method, "params": params}))
+                while True:
+                    msg = json.loads(await ws.recv())
+                    if msg.get("id") == n:
+                        return msg.get("result", {})
+
+            await call("Page.enable")
+            await call("Page.navigate", url=url)
+            await asyncio.sleep(wait)
+            shot = await call("Page.captureScreenshot", format="png")
+            out.write_bytes(base64.b64decode(shot["data"]))
+    finally:
+        proc.terminate()
+        shutil.rmtree(profile, ignore_errors=True)
+
+
+def shoot(url: str, out: Path, wait: float = 4, width: int = 1280, height: int = 1300) -> Path:
+    asyncio.run(_shoot(url, Path(out), wait, width, height))
+    return Path(out)
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    ap.add_argument("url")
+    ap.add_argument("out", type=Path)
+    ap.add_argument("--wait", type=float, default=4)
+    ap.add_argument("--width", type=int, default=1280)
+    ap.add_argument("--height", type=int, default=1300)
+    a = ap.parse_args()
+    print(shoot(a.url, a.out, a.wait, a.width, a.height))

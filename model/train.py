@@ -66,30 +66,35 @@ XGB_INTERACTIONS = [
 ]
 
 
+XGB_PARAMS = {
+    "objective": "binary:logistic",
+    "eval_metric": "logloss",
+    "tree_method": "hist",
+    "max_depth": 6,
+    "eta": 0.05,
+    "subsample": 0.8,
+    "min_child_weight": 1000,
+    "lambda": 1.0,
+    "seed": 0,
+}
+XGB_MAX_ROUNDS, XGB_EARLY_STOP = 3000, 50
+
+
 def train_xgboost(x, y, xv, yv, **overrides):
     import xgboost as xgb
 
     dtrain = xgb.DMatrix(xgb_inputs(x), label=y, feature_names=FEATURES)
     dval = xgb.DMatrix(xgb_inputs(xv), label=yv, feature_names=FEATURES)
-    params = {
-        "objective": "binary:logistic",
-        "eval_metric": "logloss",
-        "tree_method": "hist",
-        "max_depth": 6,
-        "eta": 0.05,
-        "subsample": 0.8,
-        "min_child_weight": 1000,
-        "lambda": 1.0,
+    params = XGB_PARAMS | {
         "monotone_constraints": "(" + ",".join(str(MONOTONE[f]) for f in FEATURES) + ")",
         "interaction_constraints": json.dumps([[FEATURES.index(f) for f in group] for group in XGB_INTERACTIONS]),
-        "seed": 0,
     } | overrides
     booster = xgb.train(
         params,
         dtrain,
-        num_boost_round=3000,
+        num_boost_round=XGB_MAX_ROUNDS,
         evals=[(dval, "val")],
-        early_stopping_rounds=50,
+        early_stopping_rounds=XGB_EARLY_STOP,
         verbose_eval=100,
     )
     # Keep only the trees up to the best iteration, and record the preprocessing.
@@ -238,6 +243,16 @@ def main() -> None:
             **ENDGAME_PARAMS,
         },
         "calibrated": bool(args.calibrate),
+        # Everything needed to say how each model was trained (docs/evidence/README.md).
+        "settings": {
+            "logreg": {"type": "logistic regression", "C": 1.0, "inputs": "standardized"},
+            "xgboost": XGB_PARAMS | {"max_rounds": XGB_MAX_ROUNDS, "early_stopping_rounds": XGB_EARLY_STOP,
+                                     "strength_step": XGB_STRENGTH_STEP, "monotone": MONOTONE,
+                                     "interaction_groups": XGB_INTERACTIONS},  # fmt: skip
+            "mlp": {"hidden_layers": [mlp.HIDDEN, mlp.HIDDEN], "optimizer": "Adam", "lr": 2e-3, "batch_size": 4096,
+                    "max_epochs": args.mlp_epochs, "early_stopping_patience": 4} if "mlp" in names else None,
+            "endgame": ENDGAME_PARAMS | {"window_seconds": [ENDGAME_START, ENDGAME_FULL], "base": base},
+        },
         "train_seconds": timings,
     }
     (out / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")

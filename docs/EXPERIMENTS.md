@@ -91,3 +91,56 @@ because the production pick is the best *overall* validation Brier.
 the ball, 10 s left: real 18%, models 5-10%; tied with the ball, 5 s left:
 real 67%, XGBoost 59%). Few training plays sit in those exact spots, and none
 of these changes gave the models enough to learn them.
+
+## E4. A separate end-of-game model (kept, now on the site)
+
+**2026-11-09.** The whole-game models learn close finishes from a sliver of
+their data: 12,145 of 1.8 million training plays (0.7%) are from the last 30
+seconds of a game within 3 points. So the end gets a model of its own: XGBoost
+trained only on plays with 3:00 or less left (141,883 plays), with the same six
+inputs and the same constraints as the whole-game XGBoost (E3). It's blended
+into the best whole-game model as the clock runs: none of it at 3:00 left, all
+of it from 2:00 on, so the chart never jumps.
+
+Settings swept on the validation season
+([experiments/e4_endgame_settings.py](experiments/e4_endgame_settings.py)):
+tree depth 4 or 6, leaves of 50, 200 or 1,000, with or without E1's
+possession × time input. Kept: depth 4, leaves of 50, no extra input (best on
+close finishes; the extra input didn't add anything).
+
+| Validation Brier | Overall | Last 2 min | Last 30 s | Last 30 s, within 3 pts |
+| --- | --- | --- | --- | --- |
+| Baseline | 0.15051 | 0.04617 | 0.05112 | 0.12708 |
+| Baseline + end-game model | **0.15042** | **0.04478** | **0.04897** | **0.12152** |
+
+Best validation Brier of the four, so it now serves the site
+(`model/artifacts/endgame_xgb.json`, base model recorded inside it).
+**Test season (2025-26):** Brier 0.14517 vs the baseline's 0.14524; last 2
+minutes 0.0459 vs 0.0471; worst calibration bin 1.7 points.
+
+| Situation | Real games | Baseline | End-game model |
+| --- | --- | --- | --- |
+| Down 2, 10 s left, home ball | 18% | 5% | 15% |
+| Tied, 5 s left, home ball | 67% | 54% | 62% |
+| Up 3, 30 s left, away ball | 88% | 94% | 90% |
+
+It mostly learned that a small deficit late isn't hopeless; the ball itself
+still counts for less than it should (down 2, 10 s left: 15% with the ball,
+10% without; real games 18% and 7%).
+
+## E5. Longer end-game window (not kept)
+
+**2026-11-09.** The explorer's error map still showed misses between 6:00 and
+3:00, before the hand-over, so the window was tried longer (validation Brier):
+
+| Window: starts → fully in | Overall | 6:00-3:00 | Last 3 min | Last 30 s | Last 30 s, within 3 pts |
+| --- | --- | --- | --- | --- | --- |
+| Baseline only | 0.15051 | 0.07963 | 0.04986 | 0.05112 | 0.12708 |
+| **3:00 → 2:00 (kept)** | **0.15042** | 0.07963 | 0.04876 | **0.04897** | **0.12152** |
+| 5:00 → 4:00 | 0.15044 | 0.07992 | 0.04880 | 0.04901 | 0.12162 |
+| 6:00 → 4:00 | 0.15043 | 0.07981 | 0.04878 | 0.04921 | 0.12212 |
+| 8:00 → 6:00 | 0.15044 | 0.08003 | 0.04872 | 0.04906 | 0.12173 |
+| 12:00 → 10:00 | 0.15051 | 0.08003 | 0.04897 | 0.04954 | 0.12301 |
+
+An end-game model doesn't beat the baseline before 3:00, so the misses there
+are mostly noise or need different inputs (timeouts left, the foul bonus).

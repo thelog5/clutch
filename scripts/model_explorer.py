@@ -104,16 +104,18 @@ def reality(models: dict, seasons: list[str]) -> dict:
 
 
 def leans(models: dict) -> dict:
-    """What each model leans on: baseline weights and XGBoost's split gain."""
+    """What each model leans on: baseline weights and each tree model's split gain."""
     out = {}
     if "logreg" in models:
         clf = models["logreg"]._clf
         coef = clf.named_steps["logisticregression"].coef_[0]
         out["logreg"] = {f: round(float(c), 3) for f, c in zip(FEATURES, coef, strict=True)}
-    if "xgboost" in models:
-        gain = models["xgboost"]._booster.get_score(importance_type="total_gain")
-        total = sum(gain.values()) or 1.0
-        out["xgboost"] = {f: round(gain.get(f, 0.0) / total, 4) for f in FEATURES}
+    boosters = {"xgboost": lambda m: m._booster, "endgame": lambda m: m._late}
+    for name, get in boosters.items():
+        if name in models:
+            gain = get(models[name]).get_score(importance_type="total_gain")
+            total = sum(gain.values()) or 1.0
+            out[name] = {f: round(gain.get(f, 0.0) / total, 4) for f in FEATURES}
     return out
 
 

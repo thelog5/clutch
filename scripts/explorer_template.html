@@ -19,6 +19,7 @@
   --m-logreg: #2a78d6;
   --m-xgboost: #eb6834;
   --m-mlp: #1baf7a;
+  --m-endgame: #111111;
   /* win chance: away pole, even, home pole */
   --away: #256abf;
   --even: #f0efec;
@@ -35,7 +36,7 @@
     color-scheme: dark;
     --paper: #0d0d0e; --surface: #171719; --ink: #f3f3f1; --ink-2: #c2c2bc; --ink-3: #93938d;
     --line: #2b2b2e; --line-soft: #222225; --brand: #ff8a57; --focus: #60a5fa;
-    --m-logreg: #3987e5; --m-xgboost: #d95926; --m-mlp: #199e70;
+    --m-logreg: #3987e5; --m-xgboost: #d95926; --m-mlp: #199e70; --m-endgame: #f3f3f1;
     --away: #3987e5; --even: #383835; --home: #e66767;
     --low: #eda100; --right: #383835; --high: #9085e9; --empty: #1c1c1e;
   }
@@ -44,7 +45,7 @@
   color-scheme: dark;
   --paper: #0d0d0e; --surface: #171719; --ink: #f3f3f1; --ink-2: #c2c2bc; --ink-3: #93938d;
   --line: #2b2b2e; --line-soft: #222225; --brand: #ff8a57; --focus: #60a5fa;
-  --m-logreg: #3987e5; --m-xgboost: #d95926; --m-mlp: #199e70;
+  --m-logreg: #3987e5; --m-xgboost: #d95926; --m-mlp: #199e70; --m-endgame: #f3f3f1;
   --away: #3987e5; --even: #383835; --home: #e66767;
   --low: #eda100; --right: #383835; --high: #9085e9; --empty: #1c1c1e;
 }
@@ -98,7 +99,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
 .slider label { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--ink-3); }
 .slider output { color: var(--ink); font-weight: 600; font-size: 15px; }
 input[type="range"] { width: 100%; accent-color: var(--ink); }
-.answers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 12px; }
 .answer { display: grid; gap: 2px; align-content: start; }
 .answer .big { font-size: clamp(1.8rem, 4.5vw, 2.6rem); font-weight: 700; font-stretch: 80%; line-height: 1; font-variant-numeric: tabular-nums; }
 .answer .who { font-size: 12.5px; color: var(--ink-2); }
@@ -134,7 +135,6 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: var(-
 }
 @media (max-width: 760px) {
   .ask { grid-template-columns: 1fr; }
-  .answers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .answer.real { border-left: 0; padding-left: 0; }
 }
 @media (prefers-reduced-motion: no-preference) { .seg button { transition: background .12s, color .12s; } }
@@ -210,6 +210,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: var(-
     <div class="leans">
       <div class="bars" id="leanLogreg"></div>
       <div class="bars" id="leanXgb"></div>
+      <div class="bars" id="leanEndgame"></div>
     </div>
     <p id="leanNote"></p>
   </section>
@@ -222,10 +223,11 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: var(-
   <section>
     <h2>Ideas to try</h2>
     <ul class="ideas">
-      <li><strong>A separate end-of-game model.</strong>
-        <span>Train one more model only on the last 3 minutes and blend it in as the clock runs down, so the end
-        gets a model of its own instead of a sliver of one built for the whole game. Training code:
-        <code>model/train.py</code>.</span></li>
+      <li><strong>Tune the end-game model (done once: E4).</strong>
+        <span>It's XGBoost trained only on the last 3 minutes, blended in from 3:00 to 2:00. Try a longer window
+        (<code>ENDGAME_START</code> in <code>model/predict.py</code>), other tree settings
+        (<code>ENDGAME_PARAMS</code> in <code>model/train.py</code>), or giving it inputs only the end needs.
+        <code>docs/experiments/e4_endgame_settings.py</code> is the sweep that picked the current settings.</span></li>
       <li><strong>Make close finishes count for more in training.</strong>
         <span>Give late, close plays a bigger weight (scikit-learn's <code>sample_weight</code>, XGBoost's
         <code>weight</code> on the <code>DMatrix</code>). Watch the calibration chart: weighting can make the model
@@ -247,8 +249,9 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: var(-
 
 <script>
 const D = /*__DATA__*/null;
-const NAMES = { logreg: "Baseline", xgboost: "XGBoost", mlp: "Neural net" };
-const LONG = { logreg: "Logistic regression (baseline)", xgboost: "XGBoost", mlp: "Neural net" };
+const NAMES = { logreg: "Baseline", xgboost: "XGBoost", mlp: "Neural net", endgame: "End-game" };
+const LONG = { logreg: "Logistic regression (baseline)", xgboost: "XGBoost", mlp: "Neural net",
+  endgame: "End-game model (whole-game model until 3:00, its own trees from 2:00)" };
 const POSS = ["Away ball", "Unknown", "Home ball"];
 const FEATURE_NAMES = {
   margin: "Score margin", seconds_left: "Time left", is_ot: "Overtime", home_possession: "Who has the ball",
@@ -293,7 +296,7 @@ function labToHex([L, a, b]) {
 let PAL = {};
 function readPalette() {
   for (const k of ["away", "even", "home", "low", "right", "high", "empty", "ink", "ink-2", "ink-3", "line",
-    "line-soft", "surface", "m-logreg", "m-xgboost", "m-mlp"]) PAL[k] = css(`--${k}`);
+    "line-soft", "surface", "m-logreg", "m-xgboost", "m-mlp", "m-endgame"]) PAL[k] = css(`--${k}`);
   PAL.lab = Object.fromEntries(["away", "even", "home", "low", "right", "high"].map((k) => [k, hexToLab(PAL[k])]));
 }
 const mix = (a, b, t) => labToHex(a.map((v, i) => v + (b[i] - v) * t));
@@ -460,12 +463,12 @@ function lines() {
     const r = real(S.margin, c); if (r.n < D.min_games) return;
     const e = ci95(r.actual, r.n) * 10;
     out += `<line x1="${x(c)}" x2="${x(c)}" y1="${y(Math.min(1000, r.actual + e))}" y2="${y(Math.max(0, r.actual - e))}" stroke="${PAL["ink-3"]}" stroke-width="1.5"></line>`;
-    out += `<circle cx="${x(c)}" cy="${y(r.actual)}" r="4" fill="${PAL.ink}" stroke="${PAL.surface}" stroke-width="2"></circle>`;
+    out += `<circle cx="${x(c)}" cy="${y(r.actual)}" r="4" fill="${PAL.surface}" stroke="${PAL["ink-3"]}" stroke-width="2"></circle>`;
   });
   const ends = [];
-  for (const k of D.models) {
+  for (const k of [...D.models].sort((a, b) => (a === "endgame") - (b === "endgame"))) {
     const pts = D.times.map((t, c) => `${x(c)},${y(gridP(k, S.margin, c))}`).join(" ");
-    out += `<polyline points="${pts}" fill="none" stroke="${PAL[`m-${k}`]}" stroke-width="2" stroke-linejoin="round"></polyline>`;
+    out += `<polyline points="${pts}" fill="none" stroke="${PAL[`m-${k}`]}" stroke-width="${k === "endgame" ? 3 : 2}" stroke-linejoin="round"></polyline>`;
     ends.push({ k, v: gridP(k, S.margin, D.times.length - 1) });
   }
   // direct labels at the right end, nudged apart
@@ -478,10 +481,10 @@ function lines() {
   svg.innerHTML = out;
   svg.setAttribute("aria-label", `Home win chance through the game at ${score(S.margin).toLowerCase()}, ${POSS[S.poss].toLowerCase()}`);
   $("lineCaption").textContent = `${score(S.margin)} with ${POSS[S.poss].toLowerCase()}, from tipoff to the final seconds. ` +
-    `Lines are the models at the strength you picked; dots are real games (any strength) with their 95% range. ` +
+    `Lines are the models at the strength you picked; the end-game model follows the baseline until 3:00 left, then peels off. Rings are real games (any strength) with their 95% range. ` +
     `Change the score with the slider above or by clicking a map.`;
   $("legendLine").innerHTML = D.models.map((k) => `<span><span class="chip" style="background:var(--m-${k})"></span>${NAMES[k]}</span>`).join("") +
-    `<span><span class="chip" style="background:var(--ink);border-radius:50%"></span>Real games, 95% range</span>`;
+    `<span><span class="chip" style="background:var(--surface);border:2px solid var(--ink-3);border-radius:50%"></span>Real games, 95% range</span>`;
 }
 
 /* ---------- leans ---------- */
@@ -504,12 +507,31 @@ function leans() {
         `<span class="fill" style="background:var(--m-xgboost);left:0;width:${(xg[f] / max) * 100}%"></span></span>` +
         `<span class="num">${(xg[f] * 100).toFixed(1)}%</span></div>`).join("");
   }
+  const eg = D.leans.endgame;
+  if (eg) {
+    const max = Math.max(...Object.values(eg));
+    $("leanEndgame").innerHTML = `<h3>End-game model: share of what its splits gained</h3><p class="muted small">The same, for the trees trained only on the last 3 minutes.</p>` +
+      D.features.map((f) => `<div class="bar"><span>${FEATURE_NAMES[f] || f}</span><span class="track">` +
+        `<span class="fill" style="background:var(--m-endgame);left:0;width:${(eg[f] / max) * 100}%"></span></span>` +
+        `<span class="num">${(eg[f] * 100).toFixed(1)}%</span></div>`).join("");
+  }
   if (lr && xg) {
     $("leanNote").textContent = `Look at "Who has the ball". The baseline gives it ${lr.home_possession.toFixed(2)}, against ` +
       `${lr.margin_x_time.toFixed(1)} for lead × time, and XGBoost gets ${(xg.home_possession * 100).toFixed(1)}% of its gain from it. ` +
       `For most of a game the ball is worth about a point, which barely moves the chance, so the models learn that it hardly ` +
-      `matters. In the last seconds it can decide the game, and the models carry the small weight there too.`;
+      `matters. In the last seconds it can decide the game, and the whole-game models carry the small weight there too.` +
+      (eg ? endgameBallNote(eg) : "");
   }
+}
+
+function endgameBallNote(eg) {
+  const t = D.times.indexOf(10), s0 = D.strength.indexOf(0);
+  const withBall = D.grid.endgame[s0][2][mi(-2)][t], without = D.grid.endgame[s0][0][mi(-2)][t];
+  const rw = real(-2, t, 2), ro = real(-2, t, 0);
+  const realTxt = rw.n >= D.min_games && ro.n >= D.min_games ? `; real games: ${pct(rw.actual)} and ${pct(ro.actual)}` : "";
+  return ` The end-game model, trained only on the last 3 minutes, gets ${(eg.home_possession * 100).toFixed(1)}% of its gain ` +
+    `from the ball. Home down 2 with 10 seconds left, it gives the home team ${pct(withBall)} with the ball and ${pct(without)} ` +
+    `without${realTxt}. It learned that a small deficit late isn't hopeless; the ball itself still counts for less than it should.`;
 }
 
 /* ---------- reasons (numbers from the training data) ---------- */

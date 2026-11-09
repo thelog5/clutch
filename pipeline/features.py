@@ -14,7 +14,16 @@ home_possession    1 if home has the ball, inferred from the last event
 strength_gap       home minus away season-to-date point differential per
                    game, using only games before this one
 margin_x_time      margin / sqrt(seconds_left + 1)
+home_timeouts      timeouts the home team can still call, by NBA rules: 7 a
+away_timeouts      game, at most 4 in the 4th quarter and 2 after 3:00 of it;
+                   2 per overtime period
+home_fouls_to_give fouls the home team can commit before the other team
+away_fouls_to_give shoots free throws: the penalty starts on the 5th team foul
+                   of a quarter (4th in overtime), and in the last 2 minutes
+                   of a period a team gets 1 foul before the penalty
 =================  ==========================================================
+
+Timeouts and fouls are counted from the play-by-play (docs/EXPERIMENTS.md, E6).
 
 Label: ``home_win`` = 1 if the home team won.
 
@@ -135,7 +144,56 @@ def build_features(plays: pd.DataFrame, strength_gap: pd.Series | dict) -> pd.Da
     gaps = pd.Series(strength_gap) if isinstance(strength_gap, dict) else strength_gap
     df["strength_gap"] = df["game_id"].map(gaps).astype(float).fillna(0.0)
     df["margin_x_time"] = df["margin"] / np.sqrt(df["seconds_left"] + 1.0)
+    counts = situation_counts(df)
+    df[list(counts.columns)] = counts  # by name: the columns come back home, away, home, ...
     return df
+
+
+# Timeouts that use up one of a team's timeouts. Coach's challenges aren't
+# counted: a successful challenge keeps the timeout, and the NBA's own count
+# in the play text agrees best without them (E6).
+CHARGED_TIMEOUTS = {"regular", "full", "short"}
+# Fouls that don't count toward the team-foul penalty.
+NON_TEAM_FOULS = ("offensive", "technical", "3 second", "flopping")
+TIMEOUTS_PER_GAME, TIMEOUTS_Q4, TIMEOUTS_LAST_3_MIN, TIMEOUTS_OT = 7, 4, 2, 2
+FOULS_BEFORE_PENALTY, FOULS_BEFORE_PENALTY_OT = 4, 3
+
+
+def situation_counts(df: pd.DataFrame) -> pd.DataFrame:
+    """Timeouts left and fouls to give for each team, after each play.
+
+    ``df`` is in game order with ``game_id``, ``period``, ``clock_secs``,
+    ``side``, ``action_type`` and ``sub_type``.
+    """
+    at = df["action_type"].fillna("").str.lower()
+    st = df["sub_type"].fillna("").str.lower()
+    game, period, clock = df["game_id"], df["period"], df["clock_secs"]
+    reg = period <= config.REGULATION_PERIODS
+    q4 = period == config.REGULATION_PERIODS
+
+    timeout = at.eq("timeout") & st.isin(CHARGED_TIMEOUTS)
+    team_foul = at.eq("foul") & ~st.str.contains("|".join(NON_TEAM_FOULS), regex=True)
+    out = {}
+    for side, team in (("h", "home"), ("v", "away")):
+        t = (timeout & df["side"].eq(side)).astype(int)
+        used_reg = (t * reg).groupby(game).cumsum()
+        used_q4 = (t * q4).groupby(game).cumsum()
+        used_late = (t * (q4 & (clock <= 180))).groupby(game).cumsum()
+        used_period = t.groupby([game, period]).cumsum()
+        left = np.minimum(TIMEOUTS_PER_GAME - used_reg, np.where(q4, TIMEOUTS_Q4 - used_q4, 99))
+        left = np.where(q4 & (clock <= 180), np.minimum(left, TIMEOUTS_LAST_3_MIN - used_late), left)
+        left = np.where(reg, left, TIMEOUTS_OT - used_period)
+        out[f"{team}_timeouts"] = np.clip(left, 0, None).astype(int)
+
+        fl = (team_foul & df["side"].eq(side)).astype(int)
+        fouls = fl.groupby([game, period]).cumsum()
+        fouls_last2 = (fl * (clock <= 120)).groupby([game, period]).cumsum()
+        limit = np.where(reg, FOULS_BEFORE_PENALTY, FOULS_BEFORE_PENALTY_OT)
+        give = np.maximum(limit - fouls, 0)
+        give = np.where(clock <= 120, np.minimum(give, np.maximum(1 - fouls_last2, 0)), give)
+        out[f"{team}_fouls_to_give"] = give.astype(int)
+        out[f"{team}_team_fouls"] = fouls.astype(int)
+    return pd.DataFrame(out, index=df.index)
 
 
 def check_final_scores(features: pd.DataFrame, games: pd.DataFrame) -> pd.DataFrame:

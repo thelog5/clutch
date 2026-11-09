@@ -130,3 +130,48 @@ def test_live_actions_normalize_like_v3():
     assert df["description"].iloc[1].startswith("MISS")
     f = build_features(df, {"G1": 0.0})
     assert f["home_possession"].tolist() == [0, 0, 1]
+
+
+def _counts(rows):
+    from pipeline.features import situation_counts
+
+    df = frame(rows)
+    df["period"] = df["period"].astype(int)
+    df["clock_secs"] = df["clock"].map(clock_to_seconds)
+    return situation_counts(df)
+
+
+def to(n, period, clock, side, sub="Regular"):
+    r = play(n, period, clock, side, "Timeout", f"Timeout: {sub}")
+    r["sub_type"] = sub
+    return r
+
+
+def foul(n, period, clock, side, sub="Personal"):
+    r = play(n, period, clock, side, "Foul", f"{sub} foul")
+    r["sub_type"] = sub
+    return r
+
+
+def test_timeouts_left_follow_nba_rules():
+    rows = [to(i, 1, "PT08M00.00S", "h") for i in range(1, 4)]  # 3 in the 1st quarter: 4 left
+    rows += [play(10, 4, "PT11M00.00S", "", "period")]  # 4th quarter: still 4 (cap is 4)
+    rows += [to(11, 4, "PT05M00.00S", "h"), play(12, 4, "PT02M59.00S", "", "Rebound")]  # 3 left, then capped at 2
+    rows += [to(13, 4, "PT01M00.00S", "h"), to(14, 4, "PT00M30.00S", "h", "Coach Challenge")]  # challenge not charged
+    rows += [play(15, 5, "PT05M00.00S", "", "period")]  # overtime: 2 fresh
+    c = _counts(rows)
+    assert c["home_timeouts"].tolist() == [6, 5, 4, 4, 3, 2, 1, 1, 2]
+    assert c["away_timeouts"].tolist() == [7, 7, 7, 4, 4, 2, 2, 2, 2]
+
+
+def test_fouls_to_give_follow_nba_rules():
+    rows = [foul(i, 1, "PT09M00.00S", "v") for i in range(1, 4)]  # 3 fouls: 1 to give
+    rows += [foul(4, 1, "PT08M00.00S", "v", "Offensive")]  # offensive fouls don't count
+    rows += [foul(5, 1, "PT07M00.00S", "v")]  # 4th: in the penalty
+    rows += [play(6, 2, "PT03M00.00S", "", "period")]  # new quarter: 4 to give
+    rows += [play(7, 2, "PT01M59.00S", "", "Rebound")]  # last 2 minutes: only 1 to give
+    rows += [foul(8, 2, "PT01M30.00S", "v")]  # used it
+    rows += [play(9, 5, "PT04M00.00S", "", "period")]  # overtime: 3 to give
+    c = _counts(rows)
+    assert c["away_fouls_to_give"].tolist() == [3, 2, 1, 1, 0, 4, 1, 0, 3]
+    assert c["home_fouls_to_give"].tolist() == [4, 4, 4, 4, 4, 4, 1, 1, 3]

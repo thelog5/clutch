@@ -23,8 +23,10 @@ and [../EXPERIMENTS.md](../EXPERIMENTS.md) (what was tried and why).
 | R0-original | `93f8cd9` | First full real-data training run (baseline on the site) |
 | R1-xgboost-fix | `79dbcb2` | E3: XGBoost stops memorizing training games |
 | R2-endgame | `ad0444f` | E4: separate end-of-game model, now on the site |
+| R3-timeouts-fouls | patch on `568e646` | E6: timeouts left and fouls to give as inputs (**not kept**: worse on validation) |
 
-Commits are on `main`. Each run folder holds:
+Commits are on `main`. A version marked not kept was snapshotted before it was
+reverted, so its evidence is still here. Each run folder holds:
 
 | File | What it is |
 | --- | --- |

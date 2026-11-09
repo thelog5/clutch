@@ -1,0 +1,129 @@
+diff --git a/model/predict.py b/model/predict.py
+index dbb7ff9..f9e7e57 100644
+--- a/model/predict.py
++++ b/model/predict.py
+@@ -4,7 +4,8 @@ The API imports ``predict`` (one state) and ``predict_frame`` (many rows).
+ Nothing here imports torch: the MLP runs from exported numpy weights.
+ 
+ A *state* is a dict with the feature names from ``pipeline.features.FEATURES``.
+-``margin_x_time`` is filled in if it's missing, so callers can pass just::
++``margin_x_time`` is filled in if it's missing, and timeouts and fouls to give
++default to what's typical at that time, so callers can pass just::
+ 
+     predict({"margin": 8, "seconds_left": 120, "is_ot": 0,
+              "home_possession": 1, "strength_gap": 2.5})
+@@ -22,7 +23,7 @@ import pandas as pd
+ 
+ from model.mlp import forward_numpy
+ from pipeline import config
+-from pipeline.features import FEATURES
++from pipeline.features import FEATURES, typical_counts
+ 
+ MODEL_NAMES = ("logreg", "xgboost", "mlp", "endgame")
+ 
+@@ -149,6 +150,10 @@ def state_vector(state: dict, features: list[str] = FEATURES) -> list[float]:
+     s.setdefault("is_ot", 0)
+     s.setdefault("home_possession", 0.5)
+     s.setdefault("strength_gap", 0.0)
++    timeouts, fouls = typical_counts(s["seconds_left"], s["is_ot"])
++    for team in ("home", "away"):
++        s.setdefault(f"{team}_timeouts", float(timeouts))
++        s.setdefault(f"{team}_fouls_to_give", float(fouls))
+     return [float(s[f]) for f in features]
+ 
+ 
+diff --git a/model/train.py b/model/train.py
+index 05d75dc..bd51a20 100644
+--- a/model/train.py
++++ b/model/train.py
+@@ -49,6 +49,12 @@ MONOTONE = {
+     "home_possession": 1,
+     "strength_gap": 1,
+     "margin_x_time": 1,
++    # a timeout left can only help the team that has it
++    "home_timeouts": 1,
++    "away_timeouts": -1,
++    # fouls to give help the leading team and hurt the trailing one: no constraint
++    "home_fouls_to_give": 0,
++    "away_fouls_to_give": 0,
+ }
+ 
+ 
+@@ -61,7 +67,8 @@ def train_logreg(x, y):
+ # strength_gap may only combine with time (how much the gap still matters);
+ # the game-state inputs combine freely among themselves.
+ XGB_INTERACTIONS = [
+-    ["margin", "seconds_left", "is_ot", "home_possession", "margin_x_time"],
++    ["margin", "seconds_left", "is_ot", "home_possession", "margin_x_time",
++     "home_timeouts", "away_timeouts", "home_fouls_to_give", "away_fouls_to_give"],  # fmt: skip
+     ["strength_gap", "seconds_left", "is_ot"],
+ ]
+ 
+diff --git a/pipeline/features.py b/pipeline/features.py
+index a5d8d7b..2abf1cd 100644
+--- a/pipeline/features.py
++++ b/pipeline/features.py
+@@ -52,8 +52,27 @@ FEATURES = [
+     "home_possession",
+     "strength_gap",
+     "margin_x_time",
++    "home_timeouts",
++    "away_timeouts",
++    "home_fouls_to_give",
++    "away_fouls_to_give",
+ ]
+ 
++# Typical timeouts left and fouls to give by seconds left in regulation (medians
++# over 2021-26), for what-if states that don't say: (up to seconds, timeouts, fouls to give).
++TYPICAL_COUNTS = [(30, 1, 0), (180, 2, 0), (720, 3, 2), (1440, 4, 2), (2160, 5, 2), (2880, 6, 2)]
++
++
++def typical_counts(seconds_left, is_ot=0) -> tuple:
++    """(timeouts left, fouls to give) a team typically has at this point: arrays in, arrays out."""
++    t = np.asarray(seconds_left, dtype=float)
++    edges = np.array([e for e, _, _ in TYPICAL_COUNTS])
++    i = np.clip(np.searchsorted(edges, t, side="left"), 0, len(edges) - 1)
++    timeouts = np.array([to for _, to, _ in TYPICAL_COUNTS])[i]
++    fouls = np.array([fg for _, _, fg in TYPICAL_COUNTS])[i]
++    ot = np.asarray(is_ot) == 1
++    return np.where(ot, np.where(t <= 30, 1, 2), timeouts), np.where(ot, np.where(t <= 180, 0, 2), fouls)
++
+ _FT_RE = r"(\d)\s+OF\s+(\d)"
+ 
+ 
+diff --git a/scripts/explorer_template.html b/scripts/explorer_template.html
+index 94acf19..dc70f9a 100644
+--- a/scripts/explorer_template.html
++++ b/scripts/explorer_template.html
+@@ -256,6 +256,8 @@ const POSS = ["Away ball", "Unknown", "Home ball"];
+ const FEATURE_NAMES = {
+   margin: "Score margin", seconds_left: "Time left", is_ot: "Overtime", home_possession: "Who has the ball",
+   strength_gap: "Team strength", margin_x_time: "Lead × time",
++  home_timeouts: "Home timeouts left", away_timeouts: "Away timeouts left",
++  home_fouls_to_give: "Home fouls to give", away_fouls_to_give: "Away fouls to give",
+ };
+ const S = {
+   model: D.production, poss: 2, strength: D.strength.indexOf(0),
+diff --git a/scripts/model_explorer.py b/scripts/model_explorer.py
+index da16682..73d29f8 100644
+--- a/scripts/model_explorer.py
++++ b/scripts/model_explorer.py
+@@ -21,7 +21,7 @@ import pandas as pd
+ 
+ from model.predict import load_meta, load_model
+ from pipeline import config
+-from pipeline.features import FEATURES
++from pipeline.features import FEATURES, typical_counts
+ 
+ TEMPLATE = Path(__file__).with_name("explorer_template.html")
+ OUT = config.REPORTS_DIR / "explorer.html"
+@@ -42,6 +42,9 @@ def state_frame(margin, seconds_left, possession, strength) -> pd.DataFrame:
+     ).astype(float)
+     df["is_ot"] = 0.0
+     df["margin_x_time"] = df["margin"] / np.sqrt(df["seconds_left"] + 1.0)
++    timeouts, fouls = typical_counts(df["seconds_left"])
++    for team in ("home", "away"):
++        df[f"{team}_timeouts"], df[f"{team}_fouls_to_give"] = timeouts.astype(float), fouls.astype(float)
+     return df
+ 
+ 

@@ -153,7 +153,7 @@ def pick_cases(features: pd.DataFrame, artifacts: Path, n: int = 12) -> None:
 
 
 def snapshot(run: str, label: str, artifacts: Path, commit: str, features: pd.DataFrame,
-             settings: dict, screenshot: bool) -> Path:  # fmt: skip
+             settings: dict, screenshot: bool, kept: bool = True) -> Path:  # fmt: skip
     out = EVIDENCE / "runs" / run
     out.mkdir(parents=True, exist_ok=True)
     meta = load_meta(artifacts)
@@ -163,6 +163,7 @@ def snapshot(run: str, label: str, artifacts: Path, commit: str, features: pd.Da
     setup = {
         "run": run,
         "label": label,
+        "kept": kept,
         "snapshot_taken": dt.datetime.now().isoformat(timespec="seconds"),
         "commit": commit,
         "artifact_sha256": {p.name: sha256(p) for p in sorted(artifacts.iterdir()) if p.is_file()},
@@ -274,6 +275,7 @@ def main() -> None:
     parser.add_argument("--commit", help="commit the artifacts came from (default: HEAD)")
     parser.add_argument("--settings", default="{}", help="extra training settings to record, as JSON")
     parser.add_argument("--screenshot", action="store_true")
+    parser.add_argument("--not-kept", action="store_true", help="a version that was tried and reverted")
     parser.add_argument("--pick-cases", action="store_true")
     parser.add_argument("--write-split", action="store_true")
     args = parser.parse_args()
@@ -285,7 +287,7 @@ def main() -> None:
         pick_cases(features, args.artifacts)
     if args.run:
         snapshot(args.run, args.label, args.artifacts, args.commit or git("rev-parse", "--short", "HEAD"),
-                 features, json.loads(args.settings), args.screenshot)  # fmt: skip
+                 features, json.loads(args.settings), args.screenshot, kept=not args.not_kept)  # fmt: skip
 
 
 if __name__ == "__main__":

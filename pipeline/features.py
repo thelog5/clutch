@@ -241,6 +241,11 @@ def main() -> None:
         "action_type",
         "description",
         *FEATURES,
+        # counted but not model inputs (E6 didn't help on validation); kept for later experiments
+        "home_timeouts",
+        "away_timeouts",
+        "home_fouls_to_give",
+        "away_fouls_to_give",
         "home_win",
     ]
     feats = feats[keep].reset_index(drop=True)

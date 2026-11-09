@@ -33,8 +33,10 @@ def load():
     setups, metrics, situations, cases = [], [], [], []
     for r in RUNS:
         s = json.loads((r / "setup.json").read_text())
+        if not s.get("kept", True):
+            s["run"] += " (not kept)"
         setups.append(s)
-        metrics.append(pd.read_csv(r / "metrics.csv"))
+        metrics.append(pd.read_csv(r / "metrics.csv").assign(run=s["run"]))
         situations.append(pd.read_csv(r / "situations.csv").assign(run=s["run"], production=s["production"]))
         if (r / "cases.csv").exists():
             cases.append(pd.read_csv(r / "cases.csv", dtype={"game_id": str}).assign(run=s["run"],
@@ -139,6 +141,7 @@ def markdown(setups, metrics, situations, cases, charts) -> str:
                    f"| {', '.join(tr['seasons'])}: {tr['games']:,} games, {tr['plays']:,} plays |")  # fmt: skip
 
     out += ["", "## Model on the site, test season", "",
+            "A version marked *not kept* was tried and reverted; its column shows what it would have served.", "",
             "Brier score (lower is better). Regulation only for the late-game rows; \"close\" = within 3 points.", "",
             "| Situation | Plays | Games | " + " | ".join(s["run"] for s in setups) + " |",
             "| --- | --- | --- | " + " | ".join("---" for _ in setups) + " |"]  # fmt: skip

@@ -1,0 +1,163 @@
+{
+  "run": "R3-timeouts-fouls",
+  "label": "E6: timeouts left and fouls to give as inputs",
+  "kept": false,
+  "snapshot_taken": "2026-11-09T17:57:36",
+  "commit": "uncommitted (reverted); the change is docs/experiments/e6_timeouts_fouls.patch on top of 568e646",
+  "artifact_sha256": {
+    "endgame_xgb.json": "bbd69037ddde4562b20992a4d5bde4acd5e6ff1394b6c3889fd0fbc05dfc5f8d",
+    "logreg.joblib": "c01f24330ba90670212ba916709850180d95f0204c4b39e51ce889057778600e",
+    "meta.json": "29065a6aad4151f3f967f0e397b449f56d0e382dc85412cc23fe6c3b8d007926",
+    "mlp.npz": "84eee8988e1b8ecbb6dce07352508c0ceb164886fb562860c4b99624f9e95851",
+    "xgboost.json": "a364790749dd2ac32049491079ab995278efbadfc5c44e5e152045998442db82"
+  },
+  "trained_at": "2026-11-09T17:57:18",
+  "data_source": "nba",
+  "inputs": [
+    "margin",
+    "seconds_left",
+    "is_ot",
+    "home_possession",
+    "strength_gap",
+    "margin_x_time",
+    "home_timeouts",
+    "away_timeouts",
+    "home_fouls_to_give",
+    "away_fouls_to_give"
+  ],
+  "models": [
+    "logreg",
+    "xgboost",
+    "mlp",
+    "endgame"
+  ],
+  "production": "endgame",
+  "split": {
+    "train": {
+      "seasons": [
+        "2021-22",
+        "2022-23",
+        "2023-24"
+      ],
+      "games": 3685,
+      "plays": 1800726
+    },
+    "val": {
+      "seasons": [
+        "2024-25"
+      ],
+      "games": 1230,
+      "plays": 606536
+    },
+    "test": {
+      "seasons": [
+        "2025-26"
+      ],
+      "games": 1229,
+      "plays": 621370
+    }
+  },
+  "validation_scores": {
+    "logreg": {
+      "brier": 0.15051169237469927,
+      "log_loss": 0.45020256991117585
+    },
+    "xgboost": {
+      "brier": 0.15080704652947421,
+      "log_loss": 0.45147485018482436
+    },
+    "mlp": {
+      "brier": 0.15096865427457073,
+      "log_loss": 0.4514736658564379
+    },
+    "endgame": {
+      "brier": 0.15042966246729972,
+      "log_loss": 0.4496606166760566
+    }
+  },
+  "settings": {
+    "xgboost_trees": 178,
+    "xgboost_strength_step": 1.0,
+    "endgame": {
+      "base": "logreg",
+      "trees": 140,
+      "window_seconds": [
+        180.0,
+        120.0
+      ],
+      "max_depth": 4,
+      "min_child_weight": 50
+    },
+    "settings": {
+      "logreg": {
+        "type": "logistic regression",
+        "C": 1.0,
+        "inputs": "standardized"
+      },
+      "xgboost": {
+        "objective": "binary:logistic",
+        "eval_metric": "logloss",
+        "tree_method": "hist",
+        "max_depth": 6,
+        "eta": 0.05,
+        "subsample": 0.8,
+        "min_child_weight": 1000,
+        "lambda": 1.0,
+        "seed": 0,
+        "max_rounds": 3000,
+        "early_stopping_rounds": 50,
+        "strength_step": 1.0,
+        "monotone": {
+          "margin": 1,
+          "seconds_left": 0,
+          "is_ot": 0,
+          "home_possession": 1,
+          "strength_gap": 1,
+          "margin_x_time": 1,
+          "home_timeouts": 1,
+          "away_timeouts": -1,
+          "home_fouls_to_give": 0,
+          "away_fouls_to_give": 0
+        },
+        "interaction_groups": [
+          [
+            "margin",
+            "seconds_left",
+            "is_ot",
+            "home_possession",
+            "margin_x_time",
+            "home_timeouts",
+            "away_timeouts",
+            "home_fouls_to_give",
+            "away_fouls_to_give"
+          ],
+          [
+            "strength_gap",
+            "seconds_left",
+            "is_ot"
+          ]
+        ]
+      },
+      "mlp": {
+        "hidden_layers": [
+          32,
+          32
+        ],
+        "optimizer": "Adam",
+        "lr": 0.002,
+        "batch_size": 4096,
+        "max_epochs": 30,
+        "early_stopping_patience": 4
+      },
+      "endgame": {
+        "max_depth": 4,
+        "min_child_weight": 50,
+        "window_seconds": [
+          180.0,
+          120.0
+        ],
+        "base": "logreg"
+      }
+    }
+  }
+}

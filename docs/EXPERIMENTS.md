@@ -12,6 +12,7 @@ before/after comparison are in [evidence/](evidence/README.md).
 | E3 | XGBoost memorizes training games through team strength | Strength rounded, strength combines only with time, bigger leaves | `79dbcb2` | XGBoost 0.15203 → 0.15089 overall; best late game | Yes | [R1-xgboost-fix](evidence/runs/R1-xgboost-fix/) |
 | E4 | Close finishes need a model of their own | End-game XGBoost on the last 3 minutes, blended in 3:00 → 2:00 | `38e1c14`, `ad0444f` | Close last 30 s 0.12708 → 0.12152; overall 0.15051 → 0.15042 | Yes, on the site | [R2-endgame](evidence/runs/R2-endgame/) |
 | E5 | The end-game window should start earlier | Windows of 5 to 12 minutes | `208a4d2` | No gain before 3:00 | No | [sweep](experiments/e5_endgame_window.py) |
+| E6 | Timeouts left and fouls to give decide close finishes | 4 inputs counted from the play-by-play (counts match the NBA's 99.9%+) | `568e646` (counting); model change reverted | End-game model worse late (close last 30 s 0.12152 → 0.12233); no variant better | No | [R3-timeouts-fouls](evidence/runs/R3-timeouts-fouls/), [patch](experiments/e6_timeouts_fouls.patch) |
 
 ## E1. Possession × time input (not kept)
 
@@ -175,3 +176,50 @@ end-game model took over earlier.
 
 An end-game model doesn't beat the baseline before 3:00, so the misses there
 are mostly noise or need different inputs (timeouts left, the foul bonus).
+
+## E6. Timeouts left and fouls to give (not kept)
+
+**Hypothesis:** the models can't see what decides close finishes. A team with a
+timeout can move the ball to half court; "fouls to give" changes how the last
+possessions are played.
+**Commits:** `568e646` (counting, kept); the model change is
+[experiments/e6_timeouts_fouls.patch](experiments/e6_timeouts_fouls.patch) on top of it.
+**Evidence:** [runs/R3-timeouts-fouls](evidence/runs/R3-timeouts-fouls/) (marked not kept).
+
+**2026-11-09.** Four inputs counted from the play-by-play by NBA rules: each
+team's timeouts left (7 a game, at most 4 in the 4th quarter and 2 after 3:00
+of it, 2 per overtime) and fouls to give (penalty on the 5th team foul of a
+quarter, 4th in overtime, 1 foul to give in a period's last 2 minutes;
+offensive and technical fouls and coach's challenges don't count). Checked
+against the NBA's own counts written in the play text
+([experiments/e6_count_check.py](experiments/e6_count_check.py)): team fouls
+match on 99.91% of 173,935 fouls, penalty fouls had 0 fouls to give on 99.99%
+of 53,642, timeouts used match on 99.99% of 66,992. (A first run matched only
+57% because two count columns were written in the wrong order; found by this
+check, fixed before training.)
+
+| Validation Brier, close finishes (last 30 s, within 3 pts) | 6 inputs (R2) | + timeouts and fouls (R3) |
+| --- | --- | --- |
+| Baseline | 0.12708 | 0.12721 |
+| XGBoost | 0.12450 | 0.12397 |
+| Neural net | 0.12262 | 0.12234 |
+| **End-game model (on the site)** | **0.12152** | 0.12233 |
+
+Overall validation Brier didn't move (end-game model 0.15042 vs 0.15043). The
+end-game model, alone or with timeouts only, fouls only, or larger leaves,
+never beat its 6-input version on validation (sweep: inputs ± timeouts, ± fouls, leaves 50 or 200). The test season leaned the other way
+(close last 30 s 0.11317 → 0.11256), but decisions are made on validation.
+
+**Why it didn't help:** in real games these counts barely change the result in
+the situations that matter (2021-26, each game once):
+
+| Situation | 0 left | 1 or more left |
+| --- | --- | --- |
+| Down 2, 5-15 s, home ball, by home timeouts left | 16% of 100 games | 19% of 134 games |
+| Tied, 3-15 s, home ball, by home timeouts left | 69% of 70 games | 67% of 146 games |
+| Up 3, 10-40 s, away ball, by home fouls to give | 89% of 254 games | 86% of 57 games |
+
+Every gap is inside the noise for that many games, and 89% of close-finish
+plays have no fouls to give at all, so there's little to learn and the extra
+inputs mostly add noise. The counts stay in `data/features.parquet` (not as
+model inputs) for later experiments.

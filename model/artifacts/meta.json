@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-11-09T01:40:32",
+  "trained_at": "2026-11-09T17:34:34",
   "data_source": "nba",
   "features": [
     "margin",
@@ -12,9 +12,10 @@
   "models": [
     "logreg",
     "xgboost",
-    "mlp"
+    "mlp",
+    "endgame"
   ],
-  "production": "logreg",
+  "production": "endgame",
   "sample": false,
   "split": {
     "train": {
@@ -53,14 +54,29 @@
     "mlp": {
       "brier": 0.15068974240707725,
       "log_loss": 0.4505921958511283
+    },
+    "endgame": {
+      "brier": 0.15041654118825337,
+      "log_loss": 0.44952169485009297
     }
   },
   "xgboost_trees": 174,
   "xgboost_strength_step": 1.0,
+  "endgame": {
+    "base": "logreg",
+    "trees": 140,
+    "window_seconds": [
+      180.0,
+      120.0
+    ],
+    "max_depth": 4,
+    "min_child_weight": 50
+  },
   "calibrated": false,
   "train_seconds": {
-    "logreg": 0.9215648174285889,
-    "xgboost": 6.073680877685547,
-    "mlp": 9.012349128723145
+    "logreg": 0.420320987701416,
+    "xgboost": 5.62867283821106,
+    "mlp": 11.784958124160767,
+    "endgame": 0.5372879505157471
   }
 }

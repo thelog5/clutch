@@ -24,7 +24,20 @@ from model.mlp import forward_numpy
 from pipeline import config
 from pipeline.features import FEATURES
 
-MODEL_NAMES = ("logreg", "xgboost", "mlp")
+MODEL_NAMES = ("logreg", "xgboost", "mlp", "endgame")
+
+# End-of-game model (docs/EXPERIMENTS.md, E4): XGBoost trained only on the last
+# 3 minutes, blended into the best whole-game model as the clock runs down so
+# the chart never jumps: none of it at 3:00 left, all of it from 2:00 on.
+ENDGAME_START = 180.0
+ENDGAME_FULL = 120.0
+_SECONDS_LEFT = FEATURES.index("seconds_left")
+
+
+def endgame_weight(seconds_left) -> np.ndarray:
+    """How much the end-of-game model counts, 0 to 1, by seconds left."""
+    t = np.asarray(seconds_left, dtype=np.float64)
+    return np.clip((ENDGAME_START - t) / (ENDGAME_START - ENDGAME_FULL), 0.0, 1.0)
 
 # XGBoost sees team strength rounded to whole points. strength_gap is the same
 # for every play in a game and nearly unique to it, so at full precision the
@@ -57,6 +70,14 @@ class WinProbModel:
         elif name == "mlp":
             with np.load(self.dir / "mlp.npz") as f:
                 self._params = {k: f[k] for k in f.files}
+        elif name == "endgame":
+            import xgboost as xgb
+
+            self._late = xgb.Booster()
+            self._late.load_model(self.dir / "endgame_xgb.json")
+            # The whole-game model it hands over from, recorded at training time.
+            self.base = self._late.attr("base") or "logreg"
+            self._base = WinProbModel(self.base, self.dir)
         else:
             raise ValueError(f"unknown model {name!r}")
         # Optional isotonic calibration (model.train --calibrate): a monotone
@@ -75,6 +96,16 @@ class WinProbModel:
             import xgboost as xgb
 
             p = self._booster.predict(xgb.DMatrix(xgb_inputs(x), feature_names=FEATURES))
+        elif self.name == "endgame":
+            p = self._base.predict_array(x)
+            w = endgame_weight(x[:, _SECONDS_LEFT])
+            late = w > 0
+            if late.any():
+                import xgboost as xgb
+
+                q = self._late.predict(xgb.DMatrix(xgb_inputs(x[late]), feature_names=FEATURES))
+                p = p.copy()
+                p[late] = (1 - w[late]) * p[late] + w[late] * q
         else:
             p = forward_numpy(self._params, x)
         return np.clip(self.calibrate(p.astype(np.float64)), 1e-6, 1 - 1e-6)

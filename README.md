@@ -52,17 +52,17 @@ are exported to numpy, so the deployed API doesn't need torch.
 ## Results
 
 <!-- results:start -->
-Test season **2025-26**: 1,229 games, 621,370 plays. Trained on 2021-22, 2022-23, 2023-24: **3,685 games, 1,800,726 plays**. Production model (best validation Brier): **Logistic regression**.
+Test season **2025-26**: 1,229 games, 621,370 plays. Trained on 2021-22, 2022-23, 2023-24: **3,685 games, 1,800,726 plays**. Production model (best validation Brier): **End-game model**.
 
-| Metric | Logistic regression | XGBoost | MLP |
-| --- | --- | --- | --- |
-| Brier score | 0.1452 | 0.1443 | 0.1452 |
-| Log loss | 0.4375 | 0.4340 | 0.4371 |
-| Expected calibration error | 0.0099 | 0.0095 | 0.0126 |
-| Brier score, last 2 minutes only | 0.0471 | 0.0459 | 0.0475 |
+| Metric | Logistic regression | XGBoost | MLP | End-game model |
+| --- | --- | --- | --- | --- |
+| Brier score | 0.1452 | 0.1443 | 0.1452 | 0.1452 |
+| Log loss | 0.4375 | 0.4340 | 0.4371 | 0.4370 |
+| Expected calibration error | 0.0099 | 0.0095 | 0.0126 | 0.0102 |
+| Brier score, last 2 minutes only | 0.0471 | 0.0459 | 0.0475 | 0.0459 |
 
-- [x] XGBoost or the MLP beats the logistic regression baseline on test Brier (XGBoost, MLP)
-- [x] Production model (Logistic regression) has every calibration bin within 5 points of the diagonal (bins with ≥200 plays)
+- [x] XGBoost or the MLP beats the logistic regression baseline on test Brier (XGBoost, MLP, End-game model)
+- [x] Production model (End-game model) has every calibration bin within 5 points of the diagonal (bins with ≥200 plays)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="reports/calibration-dark.png">

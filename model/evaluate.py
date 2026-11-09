@@ -34,7 +34,7 @@ log = logging.getLogger("model.evaluate")
 N_BINS = 10
 MIN_BIN_ROWS = 200  # bins thinner than this are reported but don't fail acceptance
 CALIBRATION_TOLERANCE = 0.05
-LABELS = {"logreg": "Logistic regression", "xgboost": "XGBoost", "mlp": "MLP"}
+LABELS = {"logreg": "Logistic regression", "xgboost": "XGBoost", "mlp": "MLP", "endgame": "End-game model"}
 
 PHASES = {
     "first_half": lambda d: d["period"] <= 2,
@@ -108,13 +108,14 @@ def plot_calibration(results: dict, path, dark: bool = False) -> None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    # Reference palette slots 1-3 (validated all-pairs) + chart chrome.
+    # Reference palette slots 1-3 (validated all-pairs) + violet for the end-game
+    # model, which only ever sits in its own panel, + chart chrome.
     if dark:
         surface, ink, ink2, muted, grid, axis = "#1a1a19", "#f0efec", "#c3c2b7", "#898781", "#2c2c2a", "#383835"
-        series = {"logreg": "#3987e5", "xgboost": "#d95926", "mlp": "#199e70"}
+        series = {"logreg": "#3987e5", "xgboost": "#d95926", "mlp": "#199e70", "endgame": "#9085e9"}
     else:
         surface, ink, ink2, muted, grid, axis = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7"
-        series = {"logreg": "#2a78d6", "xgboost": "#eb6834", "mlp": "#1baf7a"}
+        series = {"logreg": "#2a78d6", "xgboost": "#eb6834", "mlp": "#1baf7a", "endgame": "#6250d6"}
 
     names = list(results)
     fig, axes = plt.subplots(
@@ -140,7 +141,7 @@ def plot_calibration(results: dict, path, dark: bool = False) -> None:
         ax.fill_between(diag, diag - CALIBRATION_TOLERANCE, diag + CALIBRATION_TOLERANCE,
                         color=muted, alpha=0.15, linewidth=0, label="±5 pts")  # fmt: skip
         ax.plot(diag, diag, color=muted, linewidth=1, linestyle=(0, (4, 3)))
-        ax.plot(bins["mean_pred"], bins["frac_pos"], color=series[name], linewidth=2,
+        ax.plot(bins["mean_pred"], bins["frac_pos"], color=series.get(name, ink2), linewidth=2,
                 marker="o", markersize=6, markeredgecolor=surface, markeredgewidth=1.5)  # fmt: skip
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
@@ -154,7 +155,7 @@ def plot_calibration(results: dict, path, dark: bool = False) -> None:
             hax.set_ylabel("Plays", color=ink2, fontsize=9)
 
         width = 1 / N_BINS
-        hax.bar(bins["lo"] + width / 2, bins["n"], width=width - 0.012, color=series[name], alpha=0.85)
+        hax.bar(bins["lo"] + width / 2, bins["n"], width=width - 0.012, color=series.get(name, ink2), alpha=0.85)
         hax.set_xlabel("Predicted home win probability", color=ink2, fontsize=9)
         hax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(
             lambda v, _: f"{v / 1e3:.0f}k" if v >= 1e3 else f"{v:.0f}"))  # fmt: skip

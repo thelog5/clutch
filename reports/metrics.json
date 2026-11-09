@@ -1,8 +1,8 @@
 {
   "data_source": "nba",
   "sample": false,
-  "trained_at": "2026-11-09T01:40:32",
-  "production": "logreg",
+  "trained_at": "2026-11-09T17:34:34",
+  "production": "endgame",
   "split": {
     "train": {
       "seasons": [
@@ -434,6 +434,142 @@
       "tipoff": {
         "corr_with_strength_gap": 0.9814461609490961,
         "mean_prob": 0.5405513576078066,
+        "home_win_rate": 0.5549227013832384
+      }
+    },
+    "endgame": {
+      "rows": 621370,
+      "brier": 0.1451667005609298,
+      "log_loss": 0.4369530680119915,
+      "ece": 0.010171814990846833,
+      "max_bin_gap": 0.01710192540585742,
+      "calibrated_within_5pts": true,
+      "bins": [
+        {
+          "bin": 0,
+          "n": 74751,
+          "mean_pred": 0.03263,
+          "frac_pos": 0.02649,
+          "lo": 0.0,
+          "hi": 0.1,
+          "gap": 0.00614
+        },
+        {
+          "bin": 1,
+          "n": 40196,
+          "mean_pred": 0.15083,
+          "frac_pos": 0.16114,
+          "lo": 0.1,
+          "hi": 0.2,
+          "gap": 0.01031
+        },
+        {
+          "bin": 2,
+          "n": 45371,
+          "mean_pred": 0.25069,
+          "frac_pos": 0.2506,
+          "lo": 0.2,
+          "hi": 0.3,
+          "gap": 9e-05
+        },
+        {
+          "bin": 3,
+          "n": 49472,
+          "mean_pred": 0.35064,
+          "frac_pos": 0.33864,
+          "lo": 0.3,
+          "hi": 0.4,
+          "gap": 0.01201
+        },
+        {
+          "bin": 4,
+          "n": 56292,
+          "mean_pred": 0.45082,
+          "frac_pos": 0.45877,
+          "lo": 0.4,
+          "hi": 0.5,
+          "gap": 0.00795
+        },
+        {
+          "bin": 5,
+          "n": 59447,
+          "mean_pred": 0.55059,
+          "frac_pos": 0.56265,
+          "lo": 0.5,
+          "hi": 0.6,
+          "gap": 0.01206
+        },
+        {
+          "bin": 6,
+          "n": 60824,
+          "mean_pred": 0.64998,
+          "frac_pos": 0.66446,
+          "lo": 0.6,
+          "hi": 0.7,
+          "gap": 0.01448
+        },
+        {
+          "bin": 7,
+          "n": 63586,
+          "mean_pred": 0.7503,
+          "frac_pos": 0.76457,
+          "lo": 0.7,
+          "hi": 0.8,
+          "gap": 0.01427
+        },
+        {
+          "bin": 8,
+          "n": 64149,
+          "mean_pred": 0.84888,
+          "frac_pos": 0.86598,
+          "lo": 0.8,
+          "hi": 0.9,
+          "gap": 0.0171
+        },
+        {
+          "bin": 9,
+          "n": 107282,
+          "mean_pred": 0.96737,
+          "frac_pos": 0.97482,
+          "lo": 0.9,
+          "hi": 1.0,
+          "gap": 0.00746
+        }
+      ],
+      "phases": {
+        "first_half": {
+          "rows": 308523,
+          "brier": 0.1849119475323491,
+          "log_loss": 0.5469111314601733
+        },
+        "third_quarter": {
+          "rows": 152927,
+          "brier": 0.1333862277813752,
+          "log_loss": 0.4098192848157964
+        },
+        "fourth_quarter": {
+          "rows": 156281,
+          "brier": 0.07832105318239455,
+          "log_loss": 0.24633011741142907
+        },
+        "last_2_minutes": {
+          "rows": 34743,
+          "brier": 0.04594499434978443,
+          "log_loss": 0.1496729802319941
+        },
+        "overtime": {
+          "rows": 3639,
+          "brier": 0.1413013934327743,
+          "log_loss": 0.44125144570575936
+        }
+      },
+      "final_play": {
+        "mean_prob_on_winner": 0.9952863446229189,
+        "share_above_0.95": 0.9902359641985354
+      },
+      "tipoff": {
+        "corr_with_strength_gap": 0.9969190830023703,
+        "mean_prob": 0.5574535906399722,
         "home_win_rate": 0.5549227013832384
       }
     }

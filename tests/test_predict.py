@@ -38,6 +38,26 @@ def test_model_sanity(name):
     assert m.predict({"margin": 0, "seconds_left": 2880, "strength_gap": 8}) > tied
 
 
+def test_endgame_weight_ramps_from_3_to_2_minutes():
+    from model.predict import endgame_weight
+
+    w = endgame_weight([2880, 181, 180, 150, 120, 30, 0])
+    assert w.tolist() == pytest.approx([0, 0, 0, 0.5, 1, 1, 1])
+
+
+def test_endgame_model_matches_its_base_before_3_minutes():
+    by_name = {m.name: m for m in models()}
+    if "endgame" not in by_name:
+        pytest.skip("endgame not trained")
+    end = by_name["endgame"]
+    base = WinProbModel(end.base, config.ARTIFACTS_DIR)
+    for state in ({"margin": 5, "seconds_left": 600}, {"margin": -3, "seconds_left": 181, "home_possession": 1}):
+        assert end.predict(state) == pytest.approx(base.predict(state))
+    # ...and moves smoothly through the hand-over: no jump between neighbouring seconds
+    ps = [end.predict({"margin": 0, "seconds_left": s, "home_possession": 1}) for s in range(185, 115, -1)]
+    assert max(abs(a - b) for a, b in zip(ps[:-1], ps[1:], strict=True)) < 0.02
+
+
 def test_isotonic_calibration_applies(tmp_path, bundle):
     import shutil
 

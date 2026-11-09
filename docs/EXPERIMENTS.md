@@ -2,9 +2,22 @@
 
 Changes tried on the model, what they were meant to fix, and what the numbers
 said. Decisions are made on the validation season (2024-25); the test season
-(2025-26) is only for the final report.
+(2025-26) is only for the final report. The saved numbers, charts and
+before/after comparison are in [evidence/](evidence/README.md).
+
+| # | Hypothesis | Change | Commit (`main`) | Validation result | Kept | Evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| E1 | The ball should count for more as time runs out | 7th input: possession scaled by time left | `7bb999c` | Late-game Brier no better for any model (baseline 0.0511 → 0.0520) | No | [patch](experiments/possession_x_time.patch) |
+| E2 | The possession guess is wrong late in games | None (a check against the NBA's own possession field) | `7bb999c` | Matches 90% in the last 30 s, 94% in close ones | n/a | `scripts/check_possession.py` |
+| E3 | XGBoost memorizes training games through team strength | Strength rounded, strength combines only with time, bigger leaves | `79dbcb2` | XGBoost 0.15203 → 0.15089 overall; best late game | Yes | [R1-xgboost-fix](evidence/runs/R1-xgboost-fix/) |
+| E4 | Close finishes need a model of their own | End-game XGBoost on the last 3 minutes, blended in 3:00 → 2:00 | `38e1c14`, `ad0444f` | Close last 30 s 0.12708 → 0.12152; overall 0.15051 → 0.15042 | Yes, on the site | [R2-endgame](evidence/runs/R2-endgame/) |
+| E5 | The end-game window should start earlier | Windows of 5 to 12 minutes | `208a4d2` | No gain before 3:00 | No | [sweep](experiments/e5_endgame_window.py) |
 
 ## E1. Possession × time input (not kept)
+
+**Hypothesis:** the models give the ball one fixed weight for the whole game,
+so an input that grows as time runs out lets them value it late.
+**Commit:** `7bb999c` (reverted; the change is saved as a patch).
 
 **2026-11-08.** Problem: the models undervalue having the ball in the final
 seconds. In real games (2021-22 to 2025-26, regulation only):
@@ -40,6 +53,10 @@ wrong, train on the real possession instead, and retry this input on top.
 
 ## E2. How good is the possession guess? (check, no model change)
 
+**Hypothesis:** the possession input is a guess, and if it's often wrong late,
+every model learns that the ball matters less than it does.
+**Commit:** `7bb999c` (the check script).
+
 **2026-11-09.** `scripts/check_possession.py` compared the guess with the
 NBA's own `possession` field from the live-format feed, for 25 games (5 per
 season). The two feeds' action numbers line up (home score agrees on 99.9% of
@@ -58,6 +75,10 @@ late-game gap, so a second download for the NBA's possession field isn't
 worth it for this problem.
 
 ## E3. XGBoost was memorizing training games (kept)
+
+**Hypothesis:** XGBoost loses to the simple baseline because it memorizes
+individual training games through `strength_gap`.
+**Commit:** `79dbcb2`. **Evidence:** [runs/R1-xgboost-fix](evidence/runs/R1-xgboost-fix/).
 
 **2026-11-09.** XGBoost stopped improving after about 50 trees and scored
 worse than the baseline on validation (0.1520 vs 0.1505), which a more
@@ -94,6 +115,12 @@ of these changes gave the models enough to learn them.
 
 ## E4. A separate end-of-game model (kept, now on the site)
 
+**Hypothesis:** close finishes are 0.7% of the training plays, so whole-game
+models are tuned for everything else; a model trained only on the last
+minutes will get them right.
+**Commits:** `38e1c14` (settings sweep), `ad0444f` (built in).
+**Evidence:** [runs/R2-endgame](evidence/runs/R2-endgame/), [COMPARISON.md](evidence/COMPARISON.md).
+
 **2026-11-09.** The whole-game models learn close finishes from a sliver of
 their data: 12,145 of 1.8 million training plays (0.7%) are from the last 30
 seconds of a game within 3 points. So the end gets a model of its own: XGBoost
@@ -129,6 +156,10 @@ still counts for less than it should (down 2, 10 s left: 15% with the ball,
 10% without; real games 18% and 7%).
 
 ## E5. Longer end-game window (not kept)
+
+**Hypothesis:** the misses left between 6:00 and 3:00 would go away if the
+end-game model took over earlier.
+**Commit:** `208a4d2` (results), sweep in [experiments/e5_endgame_window.py](experiments/e5_endgame_window.py).
 
 **2026-11-09.** The explorer's error map still showed misses between 6:00 and
 3:00, before the hand-over, so the window was tried longer (validation Brier):

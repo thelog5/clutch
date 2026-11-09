@@ -95,3 +95,14 @@ what to run or click. Tick them off as you go.
   plot) and writes `reports/`. Review it, then commit `README.md`,
   `reports/` and `model/artifacts/`.
 
+
+- [ ] **B9. (Later) Remove "Co-Authored-By: Claude" from past commits.**
+  Commits from 07fceb3 on don't have it; the first 57 on `main` (and the
+  older `web-revamp` commits) still do. Removing it rewrites those commits:
+  same dates and messages, new commit IDs, and a force push replaces
+  GitHub's history. Do it when no other Claude session is working in the
+  repo. Ask Claude ("remove the co-author lines"), or:
+  ```bash
+  git filter-branch --msg-filter 'sed "/^Co-Authored-By: Claude/d" | git stripspace' -- main web-revamp
+  git push --force-with-lease origin main
+  ```

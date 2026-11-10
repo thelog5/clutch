@@ -2,10 +2,29 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { GameSummary, Play, Team } from "../api";
 import { change, gameDate, nickname, pct, periodLabel, playMoment, shortDate, statusLine, swingSize } from "../format";
 import { SPEEDS, type ReplayStatus } from "../hooks/useReplay";
-import { teamColors } from "../teams";
+import { useMediaQuery } from "../hooks/useTheme";
+import { logoUrl, teamColors } from "../teams";
 
-/** Two-tone team swatch. Always shown next to the abbreviation. */
+/** The team's logo, always shown next to the abbreviation; a two-tone swatch if the logo can't load. */
 export function TeamBadge({ abbr, size = 22 }: { abbr: string; size?: number }) {
+  const dark = useMediaQuery("(prefers-color-scheme: dark)");
+  const [failed, setFailed] = useState(false);
+  const src = logoUrl(abbr, dark);
+  if (src && !failed) {
+    return (
+      <img
+        className="badge logo"
+        src={src}
+        width={size}
+        height={size}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
   const [a, b] = teamColors(abbr);
   return (
     <span

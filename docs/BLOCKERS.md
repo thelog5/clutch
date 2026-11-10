@@ -75,7 +75,8 @@ what to run or click. Tick them off as you go.
   free Render static site, created by B3. (`web/vercel.json` still works if
   you ever want Vercel instead.)
 
-- [ ] **B5. Test live polling from Render (PRD: first thing on day 2).** Open
+- [x] **B5. Test live polling from Render (PRD: first thing on day 2).** Passed 2026-11-10: the deployed
+  API's `/health` shows `live_ok: true` (the NBA live feed answers Render's servers). Open
   `https://<api-url>/games/today`, then `/health`. If `live_ok` is `false`
   and `live_error` looks like a block or timeout, cdn.nba.com is refusing
   Render's IP: set `CLUTCH_LIVE_SOURCE=off` on Render (replay stays the public

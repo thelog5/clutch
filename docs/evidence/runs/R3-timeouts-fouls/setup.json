@@ -3,7 +3,7 @@
   "label": "E6: timeouts left and fouls to give as inputs",
   "kept": false,
   "snapshot_taken": "2026-11-09T17:57:36",
-  "commit": "uncommitted (reverted); the change is docs/experiments/e6_timeouts_fouls.patch on top of 8e1e87b",
+  "commit": "uncommitted (reverted); the change is docs/experiments/e6_timeouts_fouls.patch on top of 406f419",
   "artifact_sha256": {
     "endgame_xgb.json": "bbd69037ddde4562b20992a4d5bde4acd5e6ff1394b6c3889fd0fbc05dfc5f8d",
     "logreg.joblib": "c01f24330ba90670212ba916709850180d95f0204c4b39e51ce889057778600e",

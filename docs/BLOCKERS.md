@@ -106,7 +106,7 @@ what to run or click. Tick them off as you go.
 
 - [x] **B9. Remove "Co-Authored-By: Claude" from past commits.** Done 2026-11-10: history rewritten
   (same files, authors and dates; only that line removed) and force-pushed. The steps below are kept for reference.
-  Commits from 8444f20 on don't have it; the first 57 on `main` (and the
+  Commits from 7dd9e71 on don't have it; the first 57 on `main` (and the
   older `web-revamp` commits) still do. Removing it rewrites those commits:
   same dates and messages, new commit IDs, and a force push replaces
   GitHub's history. Do it when no other Claude session is working in the

@@ -2,7 +2,7 @@
   "run": "R1-xgboost-fix",
   "label": "E3: XGBoost no longer memorizes training games",
   "snapshot_taken": "2026-11-09T17:50:20",
-  "commit": "11184b1",
+  "commit": "5f3e0da",
   "artifact_sha256": {
     "logreg.joblib": "685e05a101f24eac4caa68b8a57d9e4b08d19ac94bdc6331a483d9f832696533",
     "meta.json": "3feadf94b6b3f43906af3613b290b994f2bc31aff3ab06bc2fc7db50638de584",

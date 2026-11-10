@@ -1,7 +1,7 @@
 """Save the evidence for one model version in docs/evidence/runs/<run>/.
 
     .venv/bin/python -m scripts.snapshot R3-fouls --label "Timeouts and fouls (E6)"
-    .venv/bin/python -m scripts.snapshot R0-original --artifacts /tmp/r0 --commit 0a7bf5c --label "..."
+    .venv/bin/python -m scripts.snapshot R0-original --artifacts /tmp/r0 --commit b874ade --label "..."
 
 Numbers first, so every chart can be redrawn later (docs/evidence/compare.py):
 

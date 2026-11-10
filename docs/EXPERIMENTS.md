@@ -7,18 +7,18 @@ before/after comparison are in [evidence/](evidence/README.md).
 
 | # | Hypothesis | Change | Commit (`main`) | Validation result | Kept | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
-| E1 | The ball should count for more as time runs out | 7th input: possession scaled by time left | `6c12681` | Late-game Brier no better for any model (baseline 0.0511 → 0.0520) | No | [patch](experiments/possession_x_time.patch) |
-| E2 | The possession guess is wrong late in games | None (a check against the NBA's own possession field) | `6c12681` | Matches 90% in the last 30 s, 94% in close ones | n/a | `scripts/check_possession.py` |
-| E3 | XGBoost memorizes training games through team strength | Strength rounded, strength combines only with time, bigger leaves | `11184b1` | XGBoost 0.15203 → 0.15089 overall; best late game | Yes | [R1-xgboost-fix](evidence/runs/R1-xgboost-fix/) |
-| E4 | Close finishes need a model of their own | End-game XGBoost on the last 3 minutes, blended in 3:00 → 2:00 | `6ca9d44`, `1e6d2e2` | Close last 30 s 0.12708 → 0.12152; overall 0.15051 → 0.15042 | Yes, on the site | [R2-endgame](evidence/runs/R2-endgame/) |
-| E5 | The end-game window should start earlier | Windows of 5 to 12 minutes | `5162ddd` | No gain before 3:00 | No | [sweep](experiments/e5_endgame_window.py) |
-| E6 | Timeouts left and fouls to give decide close finishes | 4 inputs counted from the play-by-play (counts match the NBA's 99.9%+) | `8e1e87b` (counting); model change reverted | End-game model worse late (close last 30 s 0.12152 → 0.12233); no variant better | No | [R3-timeouts-fouls](evidence/runs/R3-timeouts-fouls/), [patch](experiments/e6_timeouts_fouls.patch) |
+| E1 | The ball should count for more as time runs out | 7th input: possession scaled by time left | `bf0dc22` | Late-game Brier no better for any model (baseline 0.0511 → 0.0520) | No | [patch](experiments/possession_x_time.patch) |
+| E2 | The possession guess is wrong late in games | None (a check against the NBA's own possession field) | `bf0dc22` | Matches 90% in the last 30 s, 94% in close ones | n/a | `scripts/check_possession.py` |
+| E3 | XGBoost memorizes training games through team strength | Strength rounded, strength combines only with time, bigger leaves | `5f3e0da` | XGBoost 0.15203 → 0.15089 overall; best late game | Yes | [R1-xgboost-fix](evidence/runs/R1-xgboost-fix/) |
+| E4 | Close finishes need a model of their own | End-game XGBoost on the last 3 minutes, blended in 3:00 → 2:00 | `7058d13`, `0f8e1f5` | Close last 30 s 0.12708 → 0.12152; overall 0.15051 → 0.15042 | Yes, on the site | [R2-endgame](evidence/runs/R2-endgame/) |
+| E5 | The end-game window should start earlier | Windows of 5 to 12 minutes | `1f8555a` | No gain before 3:00 | No | [sweep](experiments/e5_endgame_window.py) |
+| E6 | Timeouts left and fouls to give decide close finishes | 4 inputs counted from the play-by-play (counts match the NBA's 99.9%+) | `406f419` (counting); model change reverted | End-game model worse late (close last 30 s 0.12152 → 0.12233); no variant better | No | [R3-timeouts-fouls](evidence/runs/R3-timeouts-fouls/), [patch](experiments/e6_timeouts_fouls.patch) |
 
 ## E1. Possession × time input (not kept)
 
 **Hypothesis:** the models give the ball one fixed weight for the whole game,
 so an input that grows as time runs out lets them value it late.
-**Commit:** `6c12681` (reverted; the change is saved as a patch).
+**Commit:** `bf0dc22` (reverted; the change is saved as a patch).
 
 **2026-11-08.** Problem: the models undervalue having the ball in the final
 seconds. In real games (2021-22 to 2025-26, regulation only):
@@ -56,7 +56,7 @@ wrong, train on the real possession instead, and retry this input on top.
 
 **Hypothesis:** the possession input is a guess, and if it's often wrong late,
 every model learns that the ball matters less than it does.
-**Commit:** `6c12681` (the check script).
+**Commit:** `bf0dc22` (the check script).
 
 **2026-11-09.** `scripts/check_possession.py` compared the guess with the
 NBA's own `possession` field from the live-format feed, for 25 games (5 per
@@ -79,7 +79,7 @@ worth it for this problem.
 
 **Hypothesis:** XGBoost loses to the simple baseline because it memorizes
 individual training games through `strength_gap`.
-**Commit:** `11184b1`. **Evidence:** [runs/R1-xgboost-fix](evidence/runs/R1-xgboost-fix/).
+**Commit:** `5f3e0da`. **Evidence:** [runs/R1-xgboost-fix](evidence/runs/R1-xgboost-fix/).
 
 **2026-11-09.** XGBoost stopped improving after about 50 trees and scored
 worse than the baseline on validation (0.1520 vs 0.1505), which a more
@@ -119,7 +119,7 @@ of these changes gave the models enough to learn them.
 **Hypothesis:** close finishes are 0.7% of the training plays, so whole-game
 models are tuned for everything else; a model trained only on the last
 minutes will get them right.
-**Commits:** `6ca9d44` (settings sweep), `1e6d2e2` (built in).
+**Commits:** `7058d13` (settings sweep), `0f8e1f5` (built in).
 **Evidence:** [runs/R2-endgame](evidence/runs/R2-endgame/), [COMPARISON.md](evidence/COMPARISON.md).
 
 **2026-11-09.** The whole-game models learn close finishes from a sliver of
@@ -160,7 +160,7 @@ still counts for less than it should (down 2, 10 s left: 15% with the ball,
 
 **Hypothesis:** the misses left between 6:00 and 3:00 would go away if the
 end-game model took over earlier.
-**Commit:** `5162ddd` (results), sweep in [experiments/e5_endgame_window.py](experiments/e5_endgame_window.py).
+**Commit:** `1f8555a` (results), sweep in [experiments/e5_endgame_window.py](experiments/e5_endgame_window.py).
 
 **2026-11-09.** The explorer's error map still showed misses between 6:00 and
 3:00, before the hand-over, so the window was tried longer (validation Brier):
@@ -182,7 +182,7 @@ are mostly noise or need different inputs (timeouts left, the foul bonus).
 **Hypothesis:** the models can't see what decides close finishes. A team with a
 timeout can move the ball to half court; "fouls to give" changes how the last
 possessions are played.
-**Commits:** `8e1e87b` (counting, kept); the model change is
+**Commits:** `406f419` (counting, kept); the model change is
 [experiments/e6_timeouts_fouls.patch](experiments/e6_timeouts_fouls.patch) on top of it.
 **Evidence:** [runs/R3-timeouts-fouls](evidence/runs/R3-timeouts-fouls/) (marked not kept).
 

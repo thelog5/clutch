@@ -2,7 +2,7 @@
   "run": "R0-original",
   "label": "Original: first full real-data training run",
   "snapshot_taken": "2026-11-09T17:50:04",
-  "commit": "0a7bf5c",
+  "commit": "b874ade",
   "artifact_sha256": {
     "logreg.joblib": "685e05a101f24eac4caa68b8a57d9e4b08d19ac94bdc6331a483d9f832696533",
     "meta.json": "117bd3fa46715a242dc452dfe6f49b8ea1ad550f3360412af2908ce1e52b64a6",

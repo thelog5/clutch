@@ -4,6 +4,7 @@ import { api } from "./api";
 import { Brand } from "./components/Logo";
 import { useAsync } from "./hooks/useAsync";
 import { MetaContext } from "./meta";
+import { SNAPSHOT } from "./snapshot";
 import { GamePage } from "./pages/GamePage";
 import { HomePage } from "./pages/HomePage";
 import { HowPage } from "./pages/HowPage";
@@ -41,10 +42,11 @@ function Header() {
 }
 
 export function App() {
+  // Seasons and teams change rarely: the saved copy serves until the API answers.
   const meta = useAsync((s) => api.meta(s), []);
 
   return (
-    <MetaContext.Provider value={meta.data}>
+    <MetaContext.Provider value={meta.data ?? SNAPSHOT.meta}>
       <BrowserRouter>
         <Header />
         <main>

@@ -1,7 +1,7 @@
 PY ?= .venv/bin/python
 UV ?= uv
 
-.PHONY: setup pull pull-smoke pull-sample explore refresh features train eval precompute deploy-bundle synthetic api api-fake web test lint
+.PHONY: setup pull pull-smoke pull-sample explore refresh features train eval precompute deploy-bundle snapshot synthetic api api-fake web test lint
 
 ## Python env with training + dev extras (torch, matplotlib, pytest, ruff)
 setup:
@@ -22,12 +22,13 @@ pull-smoke:
 pull-sample:
 	$(PY) -m pipeline.pull --per-season 150
 
-## New games since the last pull -> replay bundle (no retraining). Run weekly.
+## New games since the last pull -> replay bundle and the site's snapshot (no retraining). Run weekly.
 refresh:
 	$(PY) -m pipeline.pull
 	$(PY) -m pipeline.features
 	$(PY) -m api.precompute
 	$(PY) -m api.precompute --seasons 2024-25 2025-26 2026-27 --out api/data
+	$(PY) -m scripts.web_snapshot
 
 ## Build one feature row per play -> data/features.parquet
 features:
@@ -52,6 +53,10 @@ precompute:
 ## Slim bundle the deployed API serves: last two seasons + the current one -> api/data/
 deploy-bundle:
 	$(PY) -m api.precompute --seasons 2024-25 2025-26 2026-27 --out api/data
+
+## Games the site shows while the API wakes up -> web/src/data/snapshot.json (commit it)
+snapshot:
+	$(PY) -m scripts.web_snapshot
 
 ## Synthetic dataset for development (no network). Writes to data/synthetic/
 synthetic:

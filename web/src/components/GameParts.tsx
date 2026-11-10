@@ -261,7 +261,7 @@ export function ReplayBar(props: ReplayBarProps) {
   return (
     <div className="card replay-bar" role="group" aria-label="Replay controls">
       <button className="primary play-btn" onClick={props.onToggle}>
-        <span className={running ? "icon-pause" : "icon-play"} aria-hidden />
+        <span className={status === "connecting" ? "spinner" : running ? "icon-pause" : "icon-play"} aria-hidden />
         {running ? "Pause" : status === "ended" ? "Replay" : "Play"}
       </button>
       <label className="speed">

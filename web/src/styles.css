@@ -349,6 +349,108 @@ input::placeholder {
   color: var(--ink);
 }
 
+/* -- loading ------------------------------------------------------------- */
+.spinner {
+  flex: none;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  vertical-align: -3px;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+button .spinner {
+  width: 12px;
+  height: 12px;
+  vertical-align: -1px;
+  border-top-color: currentColor;
+}
+/* A wheel over its label, then (on a slow wait) why, and something to look at meanwhile. */
+.loading {
+  padding: 24px 0;
+}
+.loading-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--ink-2);
+}
+.loading-status .spinner {
+  width: 28px;
+  height: 28px;
+  border-width: 3px;
+}
+.loading-label {
+  font-weight: 600;
+}
+.loading-hint {
+  max-width: 34ch;
+  color: var(--ink-3);
+  font-size: var(--step--1);
+}
+.meanwhile {
+  max-width: 420px;
+  margin: 20px auto 0;
+}
+.meanwhile-title {
+  margin: 0 0 8px;
+  font-size: var(--step--1);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.meanwhile ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.meanwhile-game {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+.meanwhile-game:hover {
+  border-color: var(--ink-3);
+}
+.meanwhile-game .muted {
+  font-size: var(--step--1);
+}
+.meanwhile-swing {
+  margin-left: auto;
+  color: var(--brand-ink);
+  font-weight: 700;
+  font-size: var(--step--1);
+}
+/* Small "Updating…" next to a heading over data that's already showing. */
+.updating {
+  color: var(--ink-3);
+  font-size: var(--step--1);
+  white-space: nowrap;
+}
+.updating .spinner {
+  width: 13px;
+  height: 13px;
+  margin-right: 8px;
+  vertical-align: -2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

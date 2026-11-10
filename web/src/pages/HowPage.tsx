@@ -3,6 +3,7 @@ import { api, ApiError, type ModelCard } from "../api";
 import { CalibrationChart, CalibrationTable, PhaseBars, seasonRange, SplitBar } from "../components/ModelCharts";
 import { compactCount } from "../format";
 import { useAsync } from "../hooks/useAsync";
+import { SNAPSHOT } from "../snapshot";
 
 const MODELS: Record<string, { label: string; inline: string; about: string }> = {
   logreg: {
@@ -89,7 +90,7 @@ function SourceNote({ card }: { card: ModelCard }) {
 
 export function HowPage() {
   const state = useAsync((s) => api.model(s), []);
-  const card = state.data;
+  const card = state.data ?? SNAPSHOT.model; // saved with the site, until the API answers
   const prod = card?.production;
   const serving = prod ? card.models[prod] : undefined;
   const test = serving?.test ?? null;

@@ -63,6 +63,8 @@ export default defineConfig({
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],
           charts: ["recharts"],
+          // Games saved with the site (scripts/web_snapshot.py): changes when the snapshot does, not with the code.
+          snapshot: ["./src/data/snapshot.json"],
         },
       },
     },

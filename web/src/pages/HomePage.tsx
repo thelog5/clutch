@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { api, type GameSummary, type Play, type Series } from "../api";
+import { api, type GameSummary, type Play, type RecentSwings, type Series } from "../api";
+import { Loading, Updating } from "../components/Loading";
 import { ModelIntro } from "../components/ModelIntro";
 import { GameStatus, LivePill, ProbSplit, TeamBadge, TeamLine } from "../components/GameParts";
 import { ProbChart, Sparkline } from "../components/ProbChart";
@@ -9,6 +10,7 @@ import { useAsync } from "../hooks/useAsync";
 import { useLive } from "../hooks/useLive";
 import { useToday } from "../hooks/useToday";
 import { CHART_NOTE, useMeta } from "../meta";
+import { SNAPSHOT, dayLabel } from "../snapshot";
 
 const ORDER = { live: 0, scheduled: 1, final: 2 } as const;
 
@@ -36,7 +38,7 @@ export function HomePage() {
         </p>
       </section>
       <ModelIntro />
-      {live.length > 0 ? <LiveNow games={live} /> : <FeaturedReplays />}
+      {live.length > 0 ? <LiveNow games={live} /> : <FeaturedReplays nothingLive={!!today.data} />}
       <div className="home-split">
         <Tonight games={rest} loading={today.loading} liveOk={today.data?.live_ok} error={today.error} />
         <PastGames />
@@ -203,47 +205,64 @@ function FeatureCard({
 
 /* -- featured replays (nothing live) ------------------------------------ */
 
-function FeaturedReplays() {
+interface Picks {
+  title: string;
+  note: string;
+  games: Series[];
+}
+
+/** Heading and note for one NBA day's biggest swings. */
+function dayPicks(day: RecentSwings, label: RecentSwings["label"]): Picks {
+  const date = shortDate(day.date ?? "");
+  const when = label === "today" ? "today" : label === "yesterday" ? "yesterday" : `on ${date}`;
+  return {
+    title: label === "today" ? "Today's biggest swings" : label === "yesterday" ? "Yesterday's biggest swings" : `Biggest swings, ${date}`,
+    note:
+      day.count === 1
+        ? `The one game played ${when}: replay it play by play.`
+        : day.count <= 3
+          ? `The ${day.count} games played ${when}, biggest single-play swing first. Replay them play by play.`
+          : `The 3 of ${day.count} games played ${when} with the biggest single-play swings. Replay them play by play.`,
+    games: day.games,
+  };
+}
+
+/** `nothingLive`: today's scoreboard has loaded and no game is on. */
+function FeaturedReplays({ nothingLive }: { nothingLive: boolean }) {
   const meta = useMeta();
   // Fallback: the most dramatic games of the latest finished season.
   const season = meta?.seasons.find((s) => s !== meta.seasons[0]) ?? meta?.seasons[0];
-  const picks = useAsync(
-    async (s) => {
+  const fresh = useAsync(
+    async (s): Promise<Picks> => {
       // The latest NBA day first: today's finished games, or yesterday's if today's haven't been played.
       const day = await api.recentSwings(s).catch((e) => {
         if (s.aborted) throw e;
         return null;
       });
-      if (day?.games.length) {
-        const when = day.label === "today" ? "today" : day.label === "yesterday" ? "yesterday" : `on ${shortDate(day.date ?? "")}`;
-        return {
-          title: day.label === "today" ? "Today's biggest swings" : day.label === "yesterday" ? "Yesterday's biggest swings" : `Biggest swings, ${shortDate(day.date ?? "")}`,
-          note:
-            day.count === 1
-              ? `No games are live right now. The one game played ${when}: replay it play by play.`
-              : day.count <= 3
-                ? `No games are live right now. The ${day.count} games played ${when}, biggest single-play swing first. Replay them play by play.`
-                : `No games are live right now. The 3 of ${day.count} games played ${when} with the biggest single-play swings. Replay them play by play.`,
-          games: day.games,
-        };
-      }
+      if (day?.games.length) return dayPicks(day, day.label);
       if (!season) return { title: "Biggest swings", note: "", games: [] };
       const page = await api.games({ season, sort: "swing", limit: 3 }, s);
       return {
         title: `Biggest swings, ${season}`,
-        note: "No games are live right now. Replay the season's wildest finishes, play by play.",
+        note: "Replay the season's wildest finishes, play by play.",
         games: await Promise.all(page.games.map((g) => api.series(g.id, s))),
       };
     },
     [season],
   );
-  const [first, ...others] = picks.data?.games ?? [];
+  // Until the API answers (or if it can't), the day saved with the site.
+  const picks = fresh.data ?? dayPicks(SNAPSHOT.swings, dayLabel(SNAPSHOT.swings.date));
+  const note = picks.note && (nothingLive ? `No games are live right now. ${picks.note}` : picks.note);
+  const [first, ...others] = picks.games;
 
   return (
     <section aria-labelledby="live">
-      <SectionTitle id="live">{picks.data?.title ?? "Biggest swings"}</SectionTitle>
-      {picks.data?.note && <p className="section-note">{picks.data.note}</p>}
-      {picks.error && <ApiProblem error={picks.error} />}
+      <div className="section-head">
+        <SectionTitle id="live">{picks.title}</SectionTitle>
+        {fresh.loading && <Updating />}
+      </div>
+      {note && <p className="section-note">{note}</p>}
+      {fresh.error && <ApiProblem error={fresh.error} />}
       {first && (
         <div className={`feature-grid${others.length ? "" : " solo"}`}>
           <FeatureCard
@@ -317,7 +336,7 @@ function Tonight({
   return (
     <section aria-labelledby="tonight" className="tonight">
       <SectionTitle id="tonight">Tonight{games.length > 0 && ` (${games.length})`}</SectionTitle>
-      {loading && <p className="muted">Checking tonight's schedule…</p>}
+      {loading && <Loading label="Fetching tonight's games…" meanwhile />}
       {error && !loading && <p className="section-note">Tonight's scoreboard isn't loading right now.</p>}
       {liveOk === false && (
         <p className="section-note">The live scoreboard can't be reached right now, so tonight's games aren't shown. Replays still work.</p>
@@ -380,17 +399,23 @@ function PastGames() {
   useEffect(() => setLimit(10), [season, query, sort]);
 
   const result = useAsync((s) => api.games({ season, q: query, sort, limit }, s), [season, query, sort, limit]);
-  const page = result.data;
+  // The first view (newest games, no filters) is saved with the site, so the table shows while the API wakes.
+  const firstView = season === "" && query === "" && sort === "date";
+  const page = result.data ?? (firstView ? SNAPSHOT.past : undefined);
+  const loadingMore = result.loading && !!page && limit > page.games.length;
 
   return (
     <section aria-labelledby="past" className="past">
       <div className="section-head">
         <SectionTitle id="past">Past games</SectionTitle>
-        {page && (
-          <span className="muted num" aria-live="polite">
-            {page.total.toLocaleString()} {page.total === 1 ? "game" : "games"}
-          </span>
-        )}
+        {page &&
+          (result.loading ? (
+            <Updating />
+          ) : (
+            <span className="muted num" aria-live="polite">
+              {page.total.toLocaleString()} {page.total === 1 ? "game" : "games"}
+            </span>
+          ))}
       </div>
       <div className="filters">
         <label className="field grow">
@@ -421,6 +446,7 @@ function PastGames() {
       </div>
 
       {result.error && <ApiProblem error={result.error} />}
+      {!page && result.loading && <Loading label="Fetching games…" />}
       {page && page.total === 0 && <p className="section-note">No games match. Try a team name or clear the filters.</p>}
       {page && page.games.length > 0 && (
         <div className="card table-scroll">
@@ -446,8 +472,14 @@ function PastGames() {
         </div>
       )}
       {page && page.total > page.games.length && (
-        <button className="more" onClick={() => setLimit(limit + 25)} disabled={result.loading}>
-          {result.loading ? "Loading…" : "Show 25 more"}
+        <button className="more" onClick={() => setLimit(limit + 25)} disabled={loadingMore}>
+          {loadingMore ? (
+            <>
+              <span className="spinner" aria-hidden /> Loading…
+            </>
+          ) : (
+            "Show 25 more"
+          )}
         </button>
       )}
     </section>

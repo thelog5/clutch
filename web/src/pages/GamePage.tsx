@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, type GameSummary, type Play } from "../api";
+import { Loading } from "../components/Loading";
 import { ProbChart } from "../components/ProbChart";
 import { CopyLink, PlayTable, ReplayBar, Scoreboard, SwingCard, type BoardMode } from "../components/GameParts";
 import { gameDate, playMoment, tipoffTime } from "../format";
@@ -8,6 +9,7 @@ import { useAsync } from "../hooks/useAsync";
 import { useLive } from "../hooks/useLive";
 import { SPEEDS, useReplay } from "../hooks/useReplay";
 import { CHART_NOTE } from "../meta";
+import { savedGame, savedSeries } from "../snapshot";
 
 function biggest(plays: Play[]): Play | null {
   let best: Play | null = null;
@@ -18,7 +20,9 @@ function biggest(plays: Play[]): Play | null {
 export function GamePage() {
   const { id = "" } = useParams();
   const summary = useAsync((s) => api.game(id, s), [id]);
-  const game = summary.data;
+  // Games saved with the site open before the API answers.
+  const saved = useMemo(() => savedGame(id), [id]);
+  const game = summary.data ?? saved;
 
   useEffect(() => {
     if (game) document.title = `${game.away.abbr} at ${game.home.abbr}${game.date ? `, ${gameDate(game.date)}` : ""} · Clutch`;
@@ -32,8 +36,8 @@ export function GamePage() {
       <Link to="/" className="back">
         <span aria-hidden>←</span> Back to games
       </Link>
-      {summary.loading && <p className="muted">Loading game…</p>}
-      {summary.error && (
+      {!game && summary.loading && <Loading label="Fetching this game…" meanwhile />}
+      {!game && summary.error && (
         <div className="notice">
           <strong>This game couldn't be loaded.</strong> {summary.error.message} Check the link, or pick a game from the{" "}
           <Link to="/">games list</Link>.
@@ -77,6 +81,7 @@ function Overview({
   chartActions,
   onAllPlays,
   footer,
+  empty = <div className="chart-empty muted">The chart starts with the first play.</div>,
 }: {
   game: GameSummary;
   plays: Play[];
@@ -85,6 +90,8 @@ function Overview({
   chartActions?: ReactNode;
   onAllPlays: () => void;
   footer?: ReactNode;
+  /** What the chart card shows before there are plays. */
+  empty?: ReactNode;
 }) {
   return (
     <>
@@ -97,7 +104,7 @@ function Overview({
           {plays.length > 0 || showCurrent ? (
             <ProbChart plays={plays} home={game.home} away={game.away} swing={swing} showCurrent={showCurrent} />
           ) : (
-            <div className="chart-empty muted">The chart starts with the first play.</div>
+            empty
           )}
           <p className="footnote">{CHART_NOTE}</p>
         </section>
@@ -126,6 +133,7 @@ function FinishedGame({ game }: { game: GameSummary }) {
   const [search, setSearch] = useSearchParams();
   const [tab, setTab] = useState<Tab>("overview");
   const series = useAsync((s) => api.series(game.id, s), [game.id]);
+  const saved = useMemo(() => savedSeries(game.id), [game.id]);
   const replay = useReplay(game.id);
   const autoplayed = useRef(false);
 
@@ -138,7 +146,7 @@ function FinishedGame({ game }: { game: GameSummary }) {
     }
   }, [series.data, search, replay]);
 
-  const all = useMemo(() => series.data?.plays ?? [], [series.data]);
+  const all = useMemo(() => series.data?.plays ?? saved?.plays ?? [], [series.data, saved]);
   const plays = replay.active ? replay.plays : all;
   const current = replay.active ? plays[plays.length - 1] : undefined;
   const swing = useMemo(() => biggest(plays), [plays]);
@@ -181,6 +189,13 @@ function FinishedGame({ game }: { game: GameSummary }) {
           swing={swing}
           showCurrent={replay.active}
           onAllPlays={() => setTab("plays")}
+          empty={
+            series.loading ? (
+              <div className="chart-empty">
+                <Loading label="Fetching the play-by-play…" />
+              </div>
+            ) : undefined
+          }
           chartActions={
             replay.active && (
               <span className="chart-actions">

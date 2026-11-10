@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api";
 import { compactCount } from "../format";
 import { useAsync } from "../hooks/useAsync";
+import { SNAPSHOT } from "../snapshot";
 import { seasonRange } from "./ModelCharts";
 
 const SERVING: Record<string, string> = {
@@ -12,9 +13,10 @@ const SERVING: Record<string, string> = {
 };
 const STACK = ["Python", "pandas", "scikit-learn", "XGBoost", "PyTorch", "FastAPI", "WebSockets", "React", "TypeScript"];
 
-/** Home-page summary of what the site is: an ML model, how it learned, how it was tested. Numbers from GET /model. */
+/** Home-page summary of what the site is: an ML model, how it learned, how it was tested. Numbers from GET /model (saved copy until it answers). */
 export function ModelIntro() {
-  const { data: card } = useAsync((s) => api.model(s), []);
+  const { data } = useAsync((s) => api.model(s), []);
+  const card = data ?? SNAPSHOT.model;
   const split = card?.split;
   const test = card ? card.models[card.production]?.test : null;
   const fmt = (n: number) => n.toLocaleString("en-US");

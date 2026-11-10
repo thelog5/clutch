@@ -88,8 +88,8 @@ def chart_brier_change(setups, metrics):
     ax.set_xlabel("Change in test-season Brier score vs the original (negative = better)", color=INK2, fontsize=9)
     fig.suptitle(f"Model on the site vs the original ({base_run['run']}), test season",
                  x=0.01, ha="left", color=INK, fontsize=11, fontweight="bold")  # fmt: skip
-    fig.legend(frameon=False, fontsize=8.5, loc="lower center", ncol=len(later), bbox_to_anchor=(0.5, 0.0))
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    fig.legend(frameon=False, fontsize=8.5, loc="lower center", ncol=min(len(later), 2), bbox_to_anchor=(0.5, 0.0))
+    fig.tight_layout(rect=(0, 0.04 + 0.035 * ((len(later) + 1) // 2), 1, 1))
     path = CHARTS / "brier_change_by_situation.png"
     fig.savefig(path, dpi=160, facecolor=SURFACE)
     plt.close(fig)
@@ -99,7 +99,7 @@ def chart_brier_change(setups, metrics):
 def chart_situations(setups, situations):
     """Each version's model on the site vs how often real games went the home team's way."""
     names = list(dict.fromkeys(situations["situation"]))
-    fig, ax = plt.subplots(figsize=(8, 0.5 * len(names) + 1.4), facecolor=SURFACE)
+    fig, ax = plt.subplots(figsize=(8, 0.5 * len(names) + 2.0), facecolor=SURFACE)
     style(ax)
     for k, name in enumerate(names):
         rows = situations[situations["situation"] == name]
@@ -108,7 +108,8 @@ def chart_situations(setups, situations):
         ax.plot([min(vals + [real]) * 100, max(vals + [real]) * 100], [k, k], color=GRID, linewidth=1, zorder=1)
         for i, (s, v) in enumerate(zip(setups, vals, strict=True)):
             dy = (i - (len(setups) - 1) / 2) * 0.13  # versions that share a model would otherwise hide each other
-            ax.scatter(v * 100, k + dy, s=46, color=RAMP[min(i * 2, len(RAMP) - 1)], edgecolor=SURFACE, linewidth=1.2,
+            shade = RAMP[round(i * (len(RAMP) - 1) / max(1, len(setups) - 1))]  # spread versions over the ramp
+            ax.scatter(v * 100, k + dy, s=46, color=shade, edgecolor=SURFACE, linewidth=1.2,
                        zorder=3, label=s["run"] if k == 0 else None)  # fmt: skip
         ax.scatter(real * 100, k, s=70, facecolor=SURFACE, edgecolor=INK, linewidth=1.8, zorder=4,
                    label="Real games" if k == 0 else None)  # fmt: skip
@@ -119,8 +120,8 @@ def chart_situations(setups, situations):
     ax.set_xlabel("Home team's chance to win (%), averaged over the real moments", color=INK2, fontsize=9)
     ax.set_title("Model on the site vs real games, 2024-25 and 2025-26", loc="left", color=INK, fontsize=11,
                  fontweight="bold")  # fmt: skip
-    ax.legend(frameon=False, fontsize=8.5, loc="lower right")
-    fig.tight_layout()
+    fig.legend(frameon=False, fontsize=8.5, loc="lower center", ncol=3, bbox_to_anchor=(0.5, 0.0))
+    fig.tight_layout(rect=(0, 0.04 + 0.03 * ((len(setups) + 1 + 2) // 3), 1, 1))
     path = CHARTS / "situations_vs_real.png"
     fig.savefig(path, dpi=160, facecolor=SURFACE)
     plt.close(fig)

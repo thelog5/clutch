@@ -1769,3 +1769,136 @@ a.card:hover {
 .how-foot {
   margin-top: 24px;
 }
+
+/* -- film room ---------------------------------------------------------- */
+.film-list {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  max-width: 820px;
+}
+.film-card {
+  display: grid;
+  gap: 6px;
+  padding: 20px 22px;
+  color: inherit;
+  text-decoration: none;
+}
+.film-card-title {
+  font-size: var(--step-1);
+  font-weight: 750;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.film-summary {
+  margin: 0;
+  color: var(--ink-2);
+  max-width: 68ch;
+}
+.film-meta {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--step--1);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.film-post {
+  max-width: 720px;
+  margin-top: 12px;
+}
+.film-post header {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.film-post .page-title {
+  text-wrap: balance;
+}
+.film-body {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--ink);
+}
+.film-body > * {
+  margin: 0 0 1.1em;
+}
+.film-body h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-stretch: 87.5%;
+  line-height: 1.2;
+  margin: 1.8em 0 0.6em;
+}
+.film-body h3 {
+  font-size: 1.2rem;
+  font-weight: 750;
+  margin: 1.5em 0 0.5em;
+}
+.film-body a {
+  color: var(--brand-ink);
+  text-underline-offset: 3px;
+}
+.film-body ul,
+.film-body ol {
+  padding-left: 1.3em;
+}
+.film-body li + li {
+  margin-top: 0.4em;
+}
+.film-body blockquote {
+  margin: 0 0 1.1em;
+  padding: 10px 16px;
+  border-left: 3px solid var(--brand);
+  background: var(--brand-wash);
+  color: var(--ink-2);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.film-body blockquote > :last-child {
+  margin-bottom: 0;
+}
+.film-body code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.88em;
+  background: var(--line-soft);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.film-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fcfcfb; /* the charts are drawn on a light surface in both themes */
+}
+.film-table {
+  overflow-x: auto;
+  margin: 0 0 1.1em;
+}
+.film-table table {
+  border-collapse: collapse;
+  font-size: var(--step-0);
+  font-variant-numeric: tabular-nums;
+}
+.film-table th,
+.film-table td {
+  padding: 7px 14px 7px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+.film-table th {
+  color: var(--ink-3);
+  font-weight: 600;
+  font-size: var(--step--1);
+}
+.site-footer .signature {
+  margin-top: 14px;
+  color: var(--ink-2);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}

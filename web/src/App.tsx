@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Link, Route, Routes, useLocation } from "react-router-dom";
 import { api } from "./api";
 import { Brand } from "./components/Logo";
@@ -7,11 +8,16 @@ import { GamePage } from "./pages/GamePage";
 import { HomePage } from "./pages/HomePage";
 import { HowPage } from "./pages/HowPage";
 
+// The Film Room carries the Markdown renderer, so it loads only when someone opens it.
+const FilmRoomPage = lazy(() => import("./pages/FilmRoomPage").then((m) => ({ default: m.FilmRoomPage })));
+const FilmRoomPost = lazy(() => import("./pages/FilmRoomPage").then((m) => ({ default: m.FilmRoomPost })));
+
 const NAV = [
   { to: "/#live", label: "Live", match: (path: string, hash: string) => path === "/" && (hash === "" || hash === "#live") },
   { to: "/#tonight", label: "Tonight", match: (path: string, hash: string) => path === "/" && hash === "#tonight" },
   { to: "/#past", label: "Past games", match: (path: string, hash: string) => path === "/" && hash === "#past" },
   { to: "/how", label: "How it's built", match: (path: string) => path === "/how" },
+  { to: "/film-room", label: "Film Room", match: (path: string) => path.startsWith("/film-room") },
 ];
 
 function Header() {
@@ -47,6 +53,22 @@ export function App() {
             <Route path="/game/:id" element={<GamePage />} />
             <Route path="/how" element={<HowPage />} />
             <Route
+              path="/film-room"
+              element={
+                <Suspense fallback={<div className="wrap" />}>
+                  <FilmRoomPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/film-room/:slug"
+              element={
+                <Suspense fallback={<div className="wrap" />}>
+                  <FilmRoomPost />
+                </Suspense>
+              }
+            />
+            <Route
               path="*"
               element={
                 <div className="wrap">
@@ -65,6 +87,7 @@ export function App() {
               tested on a later season it never saw.
             </p>
             <p>Play-by-play from NBA.com via nba_api. Not affiliated with the NBA or its teams.</p>
+            <p className="signature">made by the log ✝</p>
           </div>
         </footer>
       </BrowserRouter>

@@ -1,6 +1,6 @@
 // Typed client for the Clutch API (api/main.py).
 
-export const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "http://localhost:8000";
+export const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "http://127.0.0.1:8000"; // not "localhost": make api listens on IPv4 only, and localhost can resolve to ::1
 
 export function wsUrl(path: string): string {
   return API_URL.replace(/^http/, "ws") + path;

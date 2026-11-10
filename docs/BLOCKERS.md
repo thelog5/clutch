@@ -45,17 +45,25 @@ what to run or click. Tick them off as you go.
   2,598 games from 2024-25 through 2026-11-09, scored by the end-game model),
   along with `model/artifacts/` and `reports/`. Rerun `make deploy-bundle` and
   commit after `make refresh` to add newer games.
-  1. In Render: **New > Blueprint**, pick this repo. It reads `render.yaml`
-     and creates two services, `clutch-api` (free instance) and `clutch-web`
-     (static site, free). Your existing site isn't touched.
-  2. It asks for `VITE_API_URL`. Render names the API
-     `https://clutch-api.onrender.com`, or adds a suffix if that name is
-     taken, so leave it blank for now if you're not sure.
-  3. Once both exist, copy the API's URL from the `clutch-api` page, paste
-     it as `VITE_API_URL` on `clutch-web` (Environment), and choose **Save,
-     rebuild, and deploy**. The URL is baked in when the site builds.
-  4. Check `https://<api-url>/health` shows `"data_source": "nba"`, then open
-     the `clutch-web` URL and replay a game.
+  Step by step (about 15 minutes, most of it waiting for the first build):
+  1. Render dashboard → **New** → **Blueprint**. Connect GitHub if asked and
+     give Render access to the `clutch` repo (it's private). Pick it, branch
+     `main`. Render reads `render.yaml` and lists `clutch-api` (Python, free)
+     and `clutch-web` (static site, free). Your existing site isn't touched.
+  2. It asks for `CLUTCH_CORS_ORIGINS` and `VITE_API_URL`. Leave both blank
+     for now and click **Apply**. The API takes 3-5 minutes to build, the site
+     about 1.
+  3. Open `clutch-api`, copy its address (top of the page, like
+     `https://clutch-api.onrender.com`; Render adds a suffix if the name is
+     taken). Check `<that address>/health` shows `"data_source": "nba"` and
+     `"model": "endgame"`.
+  4. Open `clutch-web` → **Environment** → set `VITE_API_URL` to the API
+     address (no trailing slash) → **Save, rebuild, and deploy**.
+  5. Copy the site's address from `clutch-web`. Open `clutch-api` →
+     **Environment** → set `CLUTCH_CORS_ORIGINS` to the site's address (no
+     trailing slash) → **Save** (the API restarts).
+  6. Open the site: replay a past game (acceptance criterion: replay works on
+     the deployed site), check the Film Room and the footer.
 
   Cost: $0 on top of your current plan. The free API sleeps after 15 minutes
   with no visitors and takes about a minute to wake. Your existing site is on

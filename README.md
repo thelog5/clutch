@@ -120,6 +120,7 @@ replay series and team strengths. The model isn't retrained. Commit
 | `GET /games?team=TOR&season=2025-26` | Past games for replay (also `q`, `date`, `sort=date\|swing\|close`, paging) |
 | `GET /games/{id}` | One game's summary |
 | `GET /games/{id}/series` | Full probability series for a finished game, plus its biggest swing |
+| `GET /swings/recent` | Biggest swings of today's finished games, or yesterday's if today's haven't been played (games newer than the replay data are scored from the live feed) |
 | `WS /games/{id}/replay?speed=10` | Streams a finished game play by play; accepts `pause`, `play`, `speed`, `restart`, `seek` (also `?start=N`) |
 | `WS /games/{id}/live` | Pushes each new play's probability during a live game |
 | `GET /health`, `GET /meta` | Status, data source, model; seasons and teams for filters |

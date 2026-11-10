@@ -7,6 +7,7 @@ GET  /games/today                    tonight's games with status, score, probabi
 GET  /games?team=TOR&season=2025-26  past games for replay (also q, date, sort, paging)
 GET  /games/{id}                     one game's summary
 GET  /games/{id}/series              full probability series for a finished game
+GET  /swings/recent                  biggest swings of today's finished games, else yesterday's
 WS   /games/{id}/replay?speed=10     streams a finished game play by play
 WS   /games/{id}/live                pushes each new play's probability during a live game
 
@@ -27,6 +28,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from api import settings
 from api.live import LiveHub, make_source
 from api.modelcard import build_card
+from api.recent import RecentGames
 from api.replay import stream_replay, valid_speed
 from api.security import Guard
 from api.store import GameStore
@@ -54,6 +56,7 @@ async def lifespan(app: FastAPI):
     app.state.model = model
     app.state.card = build_card(settings.ARTIFACTS_DIR, settings.REPORTS_DIR)
     app.state.hub = LiveHub(make_source(store) if model else None, store, model)
+    app.state.recent = RecentGames(app.state.hub)
     log.info(
         "ready: %d games (%s data), model=%s, live=%s",
         len(store.games),
@@ -93,6 +96,15 @@ def store() -> GameStore:
 
 def hub() -> LiveHub:
     return app.state.hub
+
+
+def recent() -> RecentGames:
+    return app.state.recent
+
+
+async def finished_series(game_id: str) -> dict | None:
+    """A finished game's series: replay data first, then games scored from the live feed."""
+    return store().series(game_id) or recent().series(game_id) or await recent().load(game_id)
 
 
 @app.get("/health")
@@ -141,12 +153,25 @@ async def games(
     return {"total": total, "games": rows, "limit": limit, "offset": offset}
 
 
+@app.get("/swings/recent")
+async def recent_swings():
+    return await recent().day()
+
+
 @app.get("/games/{game_id}")
 async def game(game_id: GameId):
     g = store().game(game_id)
     if g is not None:
         return g | {"replay_available": True}
+    scored = recent().series(game_id)
+    if scored is not None:
+        return scored["game"] | {"replay_available": True}
     live = await hub().find(game_id)
+    if live is not None and live["status"] != "final":
+        return live
+    loaded = await recent().load(game_id)  # finished today, or a recent finished game
+    if loaded is not None:
+        return loaded["game"] | {"replay_available": True}
     if live is not None:
         return live
     raise HTTPException(404, "game not found")
@@ -154,7 +179,7 @@ async def game(game_id: GameId):
 
 @app.get("/games/{game_id}/series")
 async def series(game_id: GameId):
-    data = store().series(game_id)
+    data = await finished_series(game_id)
     if data is None:
         raise HTTPException(404, "no series for this game")
     return data
@@ -163,7 +188,7 @@ async def series(game_id: GameId):
 @app.websocket("/games/{game_id}/replay")
 async def replay(ws: WebSocket, game_id: GameId, speed: float = 10, start: Annotated[int, Query(ge=0, le=5000)] = 0):
     await ws.accept()
-    data = store().series(game_id)
+    data = await finished_series(game_id)
     if data is None:
         await ws.send_json({"type": "error", "message": "no series for this game"})
         await ws.close(code=4404)

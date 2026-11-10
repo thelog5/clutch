@@ -56,6 +56,14 @@ export interface Series {
   biggest_swing: Play | null;
 }
 
+/** The latest NBA day's biggest swings: today's finished games, else yesterday's (api/recent.py). */
+export interface RecentSwings {
+  label: "today" | "yesterday" | "latest" | null;
+  date: string | null;
+  games: Series[];
+  count: number;
+}
+
 export interface Health {
   status: string;
   data_source: "nba" | "synthetic";
@@ -168,4 +176,5 @@ export const api = {
   },
   game: (id: string, s?: AbortSignal) => get<GameSummary>(`/games/${encodeURIComponent(id)}`, s),
   series: (id: string, s?: AbortSignal) => get<Series>(`/games/${encodeURIComponent(id)}/series`, s),
+  recentSwings: (s?: AbortSignal) => get<RecentSwings>("/swings/recent", s),
 };

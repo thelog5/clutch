@@ -205,22 +205,44 @@ function FeatureCard({
 
 function FeaturedReplays() {
   const meta = useMeta();
-  // The most dramatic games of the latest finished season.
+  // Fallback: the most dramatic games of the latest finished season.
   const season = meta?.seasons.find((s) => s !== meta.seasons[0]) ?? meta?.seasons[0];
   const picks = useAsync(
     async (s) => {
-      if (!season) return [];
+      // The latest NBA day first: today's finished games, or yesterday's if today's haven't been played.
+      const day = await api.recentSwings(s).catch((e) => {
+        if (s.aborted) throw e;
+        return null;
+      });
+      if (day?.games.length) {
+        const when = day.label === "today" ? "today" : day.label === "yesterday" ? "yesterday" : `on ${shortDate(day.date ?? "")}`;
+        return {
+          title: day.label === "today" ? "Today's biggest swings" : day.label === "yesterday" ? "Yesterday's biggest swings" : `Biggest swings, ${shortDate(day.date ?? "")}`,
+          note:
+            day.count === 1
+              ? `No games are live right now. The one game played ${when}: replay it play by play.`
+              : day.count <= 3
+                ? `No games are live right now. The ${day.count} games played ${when}, biggest single-play swing first. Replay them play by play.`
+                : `No games are live right now. The 3 of ${day.count} games played ${when} with the biggest single-play swings. Replay them play by play.`,
+          games: day.games,
+        };
+      }
+      if (!season) return { title: "Biggest swings", note: "", games: [] };
       const page = await api.games({ season, sort: "swing", limit: 3 }, s);
-      return Promise.all(page.games.map((g) => api.series(g.id, s)));
+      return {
+        title: `Biggest swings, ${season}`,
+        note: "No games are live right now. Replay the season's wildest finishes, play by play.",
+        games: await Promise.all(page.games.map((g) => api.series(g.id, s))),
+      };
     },
     [season],
   );
-  const [first, ...others] = picks.data ?? [];
+  const [first, ...others] = picks.data?.games ?? [];
 
   return (
     <section aria-labelledby="live">
-      <SectionTitle id="live">Biggest swings{season ? `, ${season}` : ""}</SectionTitle>
-      <p className="section-note">No games are live right now. Replay the season's wildest finishes, play by play.</p>
+      <SectionTitle id="live">{picks.data?.title ?? "Biggest swings"}</SectionTitle>
+      {picks.data?.note && <p className="section-note">{picks.data.note}</p>}
       {picks.error && <ApiProblem error={picks.error} />}
       {first && (
         <div className={`feature-grid${others.length ? "" : " solo"}`}>

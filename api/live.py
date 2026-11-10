@@ -39,6 +39,8 @@ class LiveSource(Protocol):
 
     def actions(self, game_id: str) -> list[dict]: ...
 
+    def boxscore(self, game_id: str) -> dict | None: ...
+
 
 def _team(t: dict) -> dict:
     return {
@@ -80,6 +82,20 @@ class NBALiveSource:
         from nba_api.live.nba.endpoints import playbyplay
 
         return playbyplay.PlayByPlay(game_id, timeout=10).get_dict()["game"]["actions"]
+
+    def boxscore(self, game_id: str) -> dict | None:
+        """Status, start time, teams and score for any game, in the scoreboard's shape."""
+        from nba_api.live.nba.endpoints import boxscore
+
+        return normalize_scoreboard_game(boxscore.BoxScore(game_id, timeout=10).get_dict()["game"])
+
+
+def live_series(actions: list[dict], game_id: str, home_id: int, strength_gap: float, model):
+    """Live-feed actions -> (feature rows, displayable series with probabilities). Live mode and the
+    latest day's biggest swings (api/recent.py) both score games this way."""
+    canon = from_live(actions, game_id, home_id).dropna(subset=["period", "action_number"])
+    feats = build_features(canon, {game_id: strength_gap})
+    return feats, to_series(feats, model.predict_frame(feats))
 
 
 class FakeLiveSource:
@@ -162,6 +178,9 @@ class FakeLiveSource:
     def _visible(self, acts: list[dict], offset: float) -> list[dict]:
         t = self._clock_elapsed(offset)
         return [a for a in acts if a["_elapsed"] <= t] if t >= 0 else []
+
+    def boxscore(self, game_id: str) -> dict | None:
+        return None  # simulated games are all on the fake scoreboard
 
     def actions(self, game_id: str) -> list[dict]:
         for row, offset in self.games:
@@ -332,10 +351,7 @@ class LiveHub:
         """Recompute the series from every action seen so far and push what's new."""
         if not actions:
             return
-        canon = from_live(actions, lg.id, lg.home_id)
-        canon = canon.dropna(subset=["period", "action_number"])
-        feats = build_features(canon, {lg.id: lg.strength_gap})
-        series = to_series(feats, self.model.predict_frame(feats))
+        feats, series = live_series(actions, lg.id, lg.home_id, lg.strength_gap, self.model)
         plays = play_records(series)
         ended = any(
             str(a.get("actionType", "")).lower() == "game" and str(a.get("subType", "")).lower() == "end"

@@ -27,6 +27,7 @@ browsers being tricked into framing or misreading the site.
 * **Input:** game IDs must be letters and digits, at most 24; every query parameter has a type, range or pattern.
 * **Headers on every response:** `nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy: default-src 'none'`, HSTS, no referrer, no server banner.
 * **No API docs in production:** `/docs` and `/openapi.json` only exist when `CLUTCH_DOCS=1` (`make api` sets it locally).
+* **Outbound calls:** the API only calls the NBA's live feed for today's scoreboard, games being watched live, and (for the home page's latest-day swings) finished games from this season that aren't in the replay data. Each finished game is fetched once and kept; lookups are limited to this season's game IDs and the 20 before today's first game.
 * **Errors** return a short message, never a stack trace; `/health` trims the live feed's last error to 200 characters.
 
 ## Website (`web/security-headers.json`, sent by Render)

@@ -2,7 +2,10 @@
 
 **NBA win probability after every play, from a model trained on three seasons of play-by-play and tested on a season it never saw.**
 
-![Clutch's game center: Indiana at Dallas, Nov 9, 2026, with the win-probability line, the play-by-play and the game's biggest swing](docs/screenshot.png)
+
+https://github.com/user-attachments/assets/991c735a-93fc-4a6b-83eb-265138f9927b
+
+
 
 **[Open it at clutchnba.onrender.com](https://clutchnba.onrender.com)** · Built by [Logan Li](https://www.linkedin.com/in/logan-li-9089b7216/)
 

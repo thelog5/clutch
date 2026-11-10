@@ -64,7 +64,7 @@ Trade-off: every `make refresh` + commit adds another full copy to git history
 the better option is a GitHub Release asset that Render downloads in its build
 step (I can wire that up), or Git LFS. Commit it, or switch to a release asset?
 
-> Answer:
+> Answer: commit it (2026-11-10, Logan: "fix all dat"). The bundle is 19 MB.
 
 ### Q7. Which game should the home page feature?
 **Default used:** the game with the single biggest swing in the most recent

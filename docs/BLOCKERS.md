@@ -6,7 +6,7 @@ what to run or click. Tick them off as you go.
 
 ---
 
-- [ ] **B1. Run the real data pull (stats.nba.com).**
+- [x] **B1. Run the real data pull (stats.nba.com).** Done 2026-11-08: 6,289 games, none failed.
   The sandbox wasn't allowed to call stats.nba.com, so everything so far was
   built and tested against a synthetic dataset (see `pipeline/synthetic.py`).
   No metric from that dataset is a real result.
@@ -41,13 +41,10 @@ what to run or click. Tick them off as you go.
   ```
 
 - [ ] **B3. Deploy the API and the website on Render** (next to your existing
-  site, in the same account). After B1:
-  ```bash
-  make deploy-bundle                 # writes api/data/ (last two seasons + current)
-  # model/artifacts and reports/ hold the trained model and its test-season
-  # numbers; "How it's built" on the site reads both through GET /model.
-  git add api/data model/artifacts reports && git commit -m "data: deploy bundle" && git push
-  ```
+  site, in the same account). The deploy data is already committed (`api/data/`,
+  2,598 games from 2024-25 through 2026-11-09, scored by the end-game model),
+  along with `model/artifacts/` and `reports/`. Rerun `make deploy-bundle` and
+  commit after `make refresh` to add newer games.
   1. In Render: **New > Blueprint**, pick this repo. It reads `render.yaml`
      and creates two services, `clutch-api` (free instance) and `clutch-web`
      (static site, free). Your existing site isn't touched.
@@ -92,7 +89,7 @@ what to run or click. Tick them off as you go.
   with `ffmpeg -i in.mov -vf "fps=15,scale=960:-1" docs/demo.gif`). Then
   uncomment the GIF line near the top of the README.
 
-- [ ] **B8. Commit the real results.** `make train` on real data rewrites the
+- [x] **B8. Commit the real results.** Done; the README results are from the full run. `make train` on real data rewrites the
   README's Results section (numbers, model acceptance checks, calibration
   plot) and writes `reports/`. Review it, then commit `README.md`,
   `reports/` and `model/artifacts/`.

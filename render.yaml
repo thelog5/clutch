@@ -29,7 +29,7 @@ services:
       # "nba" polls cdn.nba.com for live games; set to "off" if Render's IP is blocked
       - key: CLUTCH_LIVE_SOURCE
         value: nba
-      # The site's address, e.g. https://clutch-web.onrender.com: only that site
+      # The site's address, https://clutchnba.onrender.com: only that site
       # can call the API from a browser or open its streams (docs/SECURITY.md).
       # Leave blank on the first deploy, fill in once the site exists.
       - key: CLUTCH_CORS_ORIGINS
@@ -37,7 +37,7 @@ services:
 
   # The website: a static site, free on every Render plan.
   - type: web
-    name: clutch-web
+    name: clutchnba
     runtime: static
     # --include=dev: the build needs Vite and TypeScript even if NODE_ENV=production is set
     buildCommand: cd web && npm ci --include=dev && npm run build

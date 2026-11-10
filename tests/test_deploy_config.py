@@ -14,7 +14,7 @@ def services():
 
 def test_site_sends_the_security_headers():
     want = json.loads((ROOT / "web" / "security-headers.json").read_text())
-    sent = {h["name"]: h["value"] for h in services()["clutch-web"]["headers"] if h["path"] == "/*"}
+    sent = {h["name"]: h["value"] for h in services()["clutchnba"]["headers"] if h["path"] == "/*"}
     assert sent == want
 
 

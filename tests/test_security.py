@@ -36,12 +36,12 @@ def test_rate_limit_per_visitor(client, monkeypatch):
 def test_streams_only_from_the_site_once_its_address_is_set(client, monkeypatch):
     from api import settings
 
-    monkeypatch.setattr(settings, "CORS_ORIGINS", ["https://clutch-web.onrender.com"])
+    monkeypatch.setattr(settings, "CORS_ORIGINS", ["https://clutchnba.onrender.com"])
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect("/games/T0000/replay?speed=60", headers={"origin": "https://evil.example"}):
             pass
     with client.websocket_connect("/games/T0000/replay?speed=60",
-                                  headers={"origin": "https://clutch-web.onrender.com"}) as ws:  # fmt: skip
+                                  headers={"origin": "https://clutchnba.onrender.com"}) as ws:  # fmt: skip
         assert ws.receive_json()["type"] in ("init", "state")
 
 

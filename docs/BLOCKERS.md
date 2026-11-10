@@ -49,7 +49,7 @@ what to run or click. Tick them off as you go.
   1. Render dashboard → **New** → **Blueprint**. Connect GitHub if asked and
      give Render access to the `clutch` repo (it's private). Pick it, branch
      `main`. Render reads `render.yaml` and lists `clutch-api` (Python, free)
-     and `clutch-web` (static site, free). Your existing site isn't touched.
+     and `clutchnba` (the website: static site, free, at https://clutchnba.onrender.com). Your existing site isn't touched.
   2. It asks for `CLUTCH_CORS_ORIGINS` and `VITE_API_URL`. Leave both blank
      for now and click **Apply**. The API takes 3-5 minutes to build, the site
      about 1.
@@ -57,9 +57,9 @@ what to run or click. Tick them off as you go.
      `https://clutch-api.onrender.com`; Render adds a suffix if the name is
      taken). Check `<that address>/health` shows `"data_source": "nba"` and
      `"model": "endgame"`.
-  4. Open `clutch-web` → **Environment** → set `VITE_API_URL` to the API
+  4. Open `clutchnba` → **Environment** → set `VITE_API_URL` to the API
      address (no trailing slash) → **Save, rebuild, and deploy**.
-  5. Copy the site's address from `clutch-web`. Open `clutch-api` →
+  5. Copy the site's address from `clutchnba`. Open `clutch-api` →
      **Environment** → set `CLUTCH_CORS_ORIGINS` to the site's address (no
      trailing slash) → **Save** (the API restarts).
   6. Open the site: replay a past game (acceptance criterion: replay works on

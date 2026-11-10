@@ -2,7 +2,7 @@
   "run": "R2-endgame",
   "label": "E4: separate end-of-game model, blended in from 3:00 to 2:00",
   "snapshot_taken": "2026-11-09T17:50:34",
-  "commit": "ad0444f",
+  "commit": "1e6d2e2",
   "artifact_sha256": {
     "endgame_xgb.json": "fe40da04549a32b4d60e383948df10fb87655ddfdc57ad36595e93ddd0db0ad3",
     "logreg.joblib": "685e05a101f24eac4caa68b8a57d9e4b08d19ac94bdc6331a483d9f832696533",

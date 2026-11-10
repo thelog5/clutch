@@ -62,7 +62,7 @@ synthetic:
 	CLUTCH_DATA_DIR=data/synthetic $(PY) -m api.precompute
 
 api:
-	$(PY) -m uvicorn api.main:app --reload --port 8000
+	CLUTCH_DOCS=1 $(PY) -m uvicorn api.main:app --reload --port 8000
 
 ## API on the synthetic dataset with fake live games (no network needed)
 api-fake:

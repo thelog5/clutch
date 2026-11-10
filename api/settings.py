@@ -39,6 +39,7 @@ POLL_SECONDS = float(os.environ.get("CLUTCH_POLL_SECONDS", "5"))
 SCOREBOARD_TTL_SECONDS = 15.0
 # Unset or blank means any origin: the API only serves public, read-only data.
 CORS_ORIGINS = [o.strip() for o in os.environ.get("CLUTCH_CORS_ORIGINS", "").split(",") if o.strip()] or ["*"]
+DOCS = os.environ.get("CLUTCH_DOCS") == "1"  # /docs and /openapi.json
 
 REPLAY_SPEEDS = (1, 10, 60)
 # Plays at the same game-clock second (fouls, free throws) still get a beat.

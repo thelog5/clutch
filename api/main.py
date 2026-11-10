@@ -18,8 +18,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Path, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
@@ -27,6 +28,7 @@ from api import settings
 from api.live import LiveHub, make_source
 from api.modelcard import build_card
 from api.replay import stream_replay, valid_speed
+from api.security import Guard
 from api.store import GameStore
 
 log = logging.getLogger("api")
@@ -62,7 +64,16 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Clutch", version="0.1.0", lifespan=lifespan)
+# The interactive API docs are off unless CLUTCH_DOCS=1 (make api turns them on locally).
+docs = settings.DOCS
+app = FastAPI(
+    title="Clutch",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url="/docs" if docs else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if docs else None,
+)
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.add_middleware(
     CORSMiddleware,
@@ -70,6 +81,10 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+app.add_middleware(Guard)  # added last = runs first: rate limits, stream caps, security headers
+
+# NBA game IDs are 10 digits; simulated live games add a FAKE prefix.
+GameId = Annotated[str, Path(max_length=24, pattern=r"^[A-Za-z0-9]+$")]
 
 
 def store() -> GameStore:
@@ -90,7 +105,7 @@ async def health():
         "model": model.name if model else None,
         "live_source": settings.LIVE_SOURCE,
         "live_ok": hub().live_ok,
-        "live_error": hub().last_error,
+        "live_error": (hub().last_error or "")[:200] or None,
     }
 
 
@@ -127,7 +142,7 @@ async def games(
 
 
 @app.get("/games/{game_id}")
-async def game(game_id: str):
+async def game(game_id: GameId):
     g = store().game(game_id)
     if g is not None:
         return g | {"replay_available": True}
@@ -138,7 +153,7 @@ async def game(game_id: str):
 
 
 @app.get("/games/{game_id}/series")
-async def series(game_id: str):
+async def series(game_id: GameId):
     data = store().series(game_id)
     if data is None:
         raise HTTPException(404, "no series for this game")
@@ -146,7 +161,7 @@ async def series(game_id: str):
 
 
 @app.websocket("/games/{game_id}/replay")
-async def replay(ws: WebSocket, game_id: str, speed: float = 10, start: int = 0):
+async def replay(ws: WebSocket, game_id: GameId, speed: float = 10, start: Annotated[int, Query(ge=0, le=5000)] = 0):
     await ws.accept()
     data = store().series(game_id)
     if data is None:
@@ -157,7 +172,7 @@ async def replay(ws: WebSocket, game_id: str, speed: float = 10, start: int = 0)
 
 
 @app.websocket("/games/{game_id}/live")
-async def live(ws: WebSocket, game_id: str):
+async def live(ws: WebSocket, game_id: GameId):
     await ws.accept()
     sub = await hub().subscribe(game_id)
     if sub is None:

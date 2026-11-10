@@ -10,7 +10,8 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements-api.txt
-    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    # No server banner; client WebSocket messages are tiny commands, so cap them at 64 KB.
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-server-header --ws-max-size 65536
     healthCheckPath: /health
     autoDeploy: true
     buildFilter:
@@ -52,6 +53,26 @@ services:
       - path: /assets/*
         name: Cache-Control
         value: public, max-age=31536000, immutable
+      # Security headers: keep in sync with web/security-headers.json (tests/test_deploy_config.py checks).
+      # connect-src allows any *.onrender.com API; add your own domain there if you give the API one.
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://cdn.nba.com; connect-src 'self' https://*.onrender.com wss://*.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+      - path: /*
+        name: X-Content-Type-Options
+        value: "nosniff"
+      - path: /*
+        name: X-Frame-Options
+        value: "DENY"
+      - path: /*
+        name: Referrer-Policy
+        value: "strict-origin-when-cross-origin"
+      - path: /*
+        name: Permissions-Policy
+        value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+      - path: /*
+        name: Strict-Transport-Security
+        value: "max-age=31536000"
     envVars:
       - key: NODE_VERSION
         value: 22.12.0

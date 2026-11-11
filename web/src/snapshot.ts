@@ -2,8 +2,8 @@
 // The free API can take up to a minute to wake, so the site ships with the
 // latest day's biggest swings, this season's biggest swings, the first page of
 // past games, the seasons and the model card, and swaps in fresh data as each
-// request comes back. Saved games carry their full series, so they open
-// without the API.
+// request comes back. Saved games carry their full series, so they open and
+// replay without the API.
 import saved from "./data/snapshot.json";
 import type { GameSummary, GamesPage, Meta, ModelCard, RecentSwings, Series } from "./api";
 
@@ -20,7 +20,7 @@ export const SNAPSHOT = saved as unknown as Snapshot;
 
 const SAVED = new Map<string, Series>([...SNAPSHOT.swings.games, ...SNAPSHOT.season_swings.games].map((s) => [s.game.id, s]));
 
-/** A game saved with its full series, so its page opens before the API is up. */
+/** A game saved with its full series, so its page opens and replays before the API is up. */
 export function savedSeries(id: string): Series | undefined {
   return SAVED.get(id);
 }

@@ -6,7 +6,7 @@ The free API sleeps when idle and takes up to a minute to wake. The site shows
 this snapshot right away (the latest day's biggest swings, this season's
 biggest swings, the first page of past games, the seasons and the model's test
 scores) and swaps in fresh data once the API answers. The games saved here
-come with their full series, so their pages open straight away too.
+come with their full series, so their pages open and replay straight away too.
 
 Run it after `make deploy-bundle`, or whenever the biggest swings should move
 on to a newer day, then commit and push: the site rebuilds with it.

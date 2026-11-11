@@ -43,7 +43,7 @@ export function GamePage() {
           <Link to="/">games list</Link>.
         </div>
       )}
-      {game && (game.replay_available ? <FinishedGame game={game} /> : <TonightGame game={game} />)}
+      {game && (game.replay_available ? <FinishedGame key={game.id} game={game} /> : <TonightGame key={game.id} game={game} />)}
     </div>
   );
 }
@@ -134,19 +134,27 @@ function FinishedGame({ game }: { game: GameSummary }) {
   const [tab, setTab] = useState<Tab>("overview");
   const series = useAsync((s) => api.series(game.id, s), [game.id]);
   const saved = useMemo(() => savedSeries(game.id), [game.id]);
-  const replay = useReplay(game.id);
+  // A saved game replays in the browser until the API answers; then it streams from the API.
+  const replay = useReplay(game.id, series.data ? undefined : saved?.plays);
   const autoplayed = useRef(false);
+  const all = useMemo(() => series.data?.plays ?? saved?.plays ?? [], [series.data, saved]);
 
   // Shareable replay links: /game/:id?replay=60 starts the replay right away.
   useEffect(() => {
     const want = Number(search.get("replay"));
-    if (!autoplayed.current && series.data && (SPEEDS as readonly number[]).includes(want)) {
+    if (!autoplayed.current && all.length && (SPEEDS as readonly number[]).includes(want)) {
       autoplayed.current = true;
       replay.start(want);
     }
-  }, [series.data, search, replay]);
+  }, [all.length, search, replay]);
+  // Once per mount: unmounting closes the replay (and StrictMode's dev remount does too).
+  useEffect(
+    () => () => {
+      autoplayed.current = false;
+    },
+    [],
+  );
 
-  const all = useMemo(() => series.data?.plays ?? saved?.plays ?? [], [series.data, saved]);
   const plays = replay.active ? replay.plays : all;
   const current = replay.active ? plays[plays.length - 1] : undefined;
   const swing = useMemo(() => biggest(plays), [plays]);
